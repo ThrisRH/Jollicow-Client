@@ -1,0 +1,19 @@
+@model IEnumerable<DishesModels>
+
+<div class="dish-list d-flex flex-column gap-3 mb-2">
+    @foreach (var dish in Model)
+    {
+        <a href="@Url.Action("DishDetail", new { acsc = Context.Request.Query["acsc"], id_dishes = dish.id_dishes })"
+            style="text-decoration: none;">
+            @await Component.InvokeAsync("DishCard", new {
+            id_category = dish.id_category,
+                id_dishes = dish.id_dishes,
+                restaurant_id = dish.restaurant_id,
+                name = dish.name,
+                price = dish.price,
+                image = dish.image,
+                status = dish.status
+                })
+    </a>
+        }
+</div>

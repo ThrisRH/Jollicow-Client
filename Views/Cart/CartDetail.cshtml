@@ -165,33 +165,36 @@
 
 
                 if (checkoutBtn) checkoutBtn.disabled = false;
-                cartItemsContainer.innerHTML = cartItems.map((item, index) => `
-                                                                                                                                                                                                                                                                                                <div class="cart-item">
-                                                                                                                                                                                                                                                                                            <button class="btn btn-sm d-flex justify-content-center align-items-center btn-outline-danger remove-btn p-0 m-0 border-1"
-                                                                                                                                                                                                                                                                                                style="width: 24px; height: 24px; align-self: flex-end; border-radius: 6px">
-                                                                                                                                                                                                                                                                                                <i class="bi bi-trash" style="font-size: 14px; line-height: 1;"></i>
-                                                                                                                                                                                                                                                                                            </button>
-                                                                                                                                                                                                                                                                                            <div class="cart-items-detail d-flex flex-row" style="gap: 12px">
-                                                                                                                                                                                                                                                                                                <div class="cart-item-container">
-                                                                                                                                                                                                                                                                                                    <div class="cart-item-details">
-                                                                                                                                                                                                                                                                                                        <div class="cart-item-name">${item.name}</div>
-                                                                                                                                                                                                                                                                                                        <div class="cart-item-options">
-                                                                                                                                                                                                                                                                                                            ${item.toppings && item.toppings.length > 0 ? `Topping: ${item.toppings.join(', ')}` : ''}
-                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                    <div class="d-flex flex-row justify-content-between align-items-center">
-                                                                                                                                                                                                                                                                                                        <div class="cart-item-quantity">
-                                                                                                                                                                                                                                                                                                            <button class="quantity-btn" onclick="updateQuantity(${index}, -1)">-</button>
-                                                                                                                                                                                                                                                                                                            <input type="number" class="quantity-input" style="color: #5F6368; font-size:12px" value="${item.quantity}"
-                                                                                                                                                                                                                                                                                                                min="1" max="99" onchange="updateQuantity(${index}, 0, this.value)">
-                                                                                                                                                                                                                                                                                                                <button class="quantity-btn" onclick="updateQuantity(${index}, 1)">+</button>
-                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                        <div class="cart-item-price">${(item.price * item.quantity).toLocaleString('vi-VN')}đ</div>
-                                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                            `).join('');
+                cartItemsContainer.innerHTML = cartItems.map((item, index) => {
+                    return `
+                    <div class="cart-item">
+                        <button class="btn btn-sm d-flex justify-content-center align-items-center btn-outline-danger remove-btn p-0 m-0 border-1"
+                            style="width: 24px; height: 24px; align-self: flex-end; border-radius: 6px">
+                            <i class="bi bi-trash" style="font-size: 14px; line-height: 1;"></i>
+                        </button>
+                        <div class="cart-items-detail d-flex flex-row" style="gap: 12px">
+                            <div class="cart-item-container">
+                                <div class="cart-item-details">
+                                    <div class="cart-item-name">${item.name}</div>
+                                    <div class="cart-item-options">
+                                        ${item.toppings && item.toppings.length > 0 ? `Topping: ${item.toppings.join(', ')}` : ''}
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-row justify-content-between align-items-center">
+                                    <div class="cart-item-quantity">
+                                        <button class="quantity-btn" onclick="updateQuantity(${index}, -1)">-</button>
+                                        <input type="number" class="quantity-input" style="color: #5F6368; font-size:12px" value="${item.quantity}"
+                                            min="1" max="99" onchange="updateQuantity(${index}, 0, this.value)">
+                                            <button class="quantity-btn" onclick="updateQuantity(${index}, 1)">+</button>
+                                    </div>
+                                    <div class="cart-item-price">${(item.price * item.quantity).toLocaleString('vi-VN')}đ</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                        `
+                }).join('');
+
 
                 // Update total
                 const total = cartItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);

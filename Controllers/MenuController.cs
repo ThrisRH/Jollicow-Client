@@ -193,5 +193,20 @@ namespace Jollicow.Controllers
 
             return View(dish);
         }
+
+        [HttpGet("/menu/getdishesbycategory")]
+        public async Task<IActionResult> GetDishesByCategory(string id_category, string restaurant_id)
+        {
+            if (string.IsNullOrEmpty(id_category) || string.IsNullOrEmpty(restaurant_id))
+            {
+                return BadRequest("Thiếu thông tin.");
+            }
+
+            var firebaseService = new FirebaseService();
+            var dishes = await firebaseService.GetAllDishesAsync();
+            var filtered = dishes.Where(d => d.id_category == id_category && d.restaurant_id == restaurant_id).ToList();
+
+            return PartialView("_DishListPartial", filtered);
+        }
     }
 }

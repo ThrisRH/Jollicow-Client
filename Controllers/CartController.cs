@@ -7,6 +7,7 @@ namespace Jollicow.Controllers
     {
         private readonly ILogger<CartController> _logger;
         private readonly TokenService _tokenService;
+        private readonly FirebaseService _firebaseService;
 
         public CartController(ILogger<CartController> logger, TokenService tokenService)
         {

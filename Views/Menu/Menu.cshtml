@@ -1,5 +1,10 @@
 ﻿@model MenuViewModel
 
+<head>
+    <link rel="stylesheet" href="~/css/menu.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/loading.css" asp-append-version="true" />
+</head>
+
 <div class="body-container">
     <!-- Banner Carousel -->
     <div id="bannerCarousel" class="carousel slide mb-3" data-bs-ride="carousel" data-bs-interval="3000">
@@ -42,38 +47,56 @@
 
     <!-- Slider Button Category -->
     <div class="scroll-slider">
-        <!-- All button -->
-        <a style="text-decoration: none;"
-            href="@Url.Action("Menu", new { acsc = Context.Request.Query["acsc"], restaurant_id = Model.RestaurantId })">
-            <button class="@(Model.SelectedCategoryID == null ? "slider-btn-active" : "slider-btn")">All</button>
-        </a>
-
         @foreach (var cate in Model.Categories)
         {
             var isActive = Model.SelectedCategoryID == cate.id_category ? "slider-btn-active" : "slider-btn";
-            <a style="text-decoration: none;"
-                href="@Url.Action("Menu", new { acsc = Context.Request.Query["acsc"], id_category = cate.id_category, restaurant_id = Model.RestaurantId })">
-                <button class="@isActive">@cate.name</button>
-            </a>
+            <button class="slider-btn @(Model.SelectedCategoryID == cate.id_category ? "slider-btn-active" : "")"
+                onclick="loadDishes('@cate.id_category', '@Model.RestaurantId', this)">
+                @cate.name
+            </button>
+
+
         }
     </div>
 
     <!-- Dish List -->
-    <div class="dish-list d-flex flex-column gap-3 mb-2">
-        @foreach (var dish in Model.Dishes)
-        {
-            <a href="@Url.Action("DishDetail", new { acsc = Context.Request.Query["acsc"], id_dishes = dish.id_dishes })"
-                style="text-decoration: none;">
-                @await Component.InvokeAsync("DishCard", new {
-                id_category = dish.id_category,
-                        id_dishes = dish.id_dishes,
-                        restaurant_id = Model.RestaurantId,
-                        name = dish.name,
-                        price = dish.price,
-                        image = dish.image,
-                        status = dish.status
-                        })
-        </a>
-                }
+    <div id="dish-list-container">
+        @await Html.PartialAsync("_DishListPartial", Model.Dishes)
     </div>
+
+    <!-- Loading spinner riêng -->
+    <div id="loadingOverlay"
+        style="display:none; width: 100vw; align-items: center; justify-content: center; margin-top: 30%; flex-direction: column; gap: 12px;">
+        <div class="loader"></div>
+        <p style="font-size: 16px; color: #080808;">Đang tải món ăn. Vui lòng chờ.</p>
+    </div>
+
 </div>
+
+
+<script>
+    function loadDishes(categoryId, restaurantId, buttonElement) {
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('dish-list-container').style.display = 'none';
+
+        const allButtons = document.querySelectorAll('.scroll-slider button');
+
+        // Xóa chỉ class active, giữ nguyên slider-btn
+        allButtons.forEach(btn => btn.classList.remove('slider-btn-active'));
+
+        // Gán class active cho nút được click
+        buttonElement.classList.add('slider-btn-active');
+
+        fetch(`/Menu/GetDishesByCategory?id_category=${categoryId}&restaurant_id=${restaurantId}`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('dish-list-container').innerHTML = html;
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('dish-list-container').style.display = 'block';
+            })
+            .catch(error => {
+                console.error("Lỗi khi load dữ liệu món:", error);
+                document.getElementById('loadingOverlay').style.display = 'none';
+            });
+    }
+</script>
