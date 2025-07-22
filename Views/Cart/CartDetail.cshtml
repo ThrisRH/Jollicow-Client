@@ -4,15 +4,34 @@
     var restaurantId = ViewData["RestaurantId"] ?? "";
 }
 
+<head>
+    <link rel="stylesheet" href="~/css/cart-detail.css" asp-append-version="true" />
+</head>
+
 <div class="cart-body d-flex flex-column justify-content-between">
     <div id="cartItemsContainer" class="cart-items mb-4">
-        <!-- Cart items will be populated here -->
+        @* Item cart trong vùng này *@
     </div>
 
     <div class="cart-summary px-0" style="padding-top: 12px;">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="mb-0">Tổng cộng:</h4>
-            <h4 class="mb-0 text-danger" id="cartTotal">0đ</h4>
+        @if (!string.IsNullOrEmpty(idTable.ToString()) && !string.IsNullOrEmpty(restaurantId.ToString()))
+        {
+            <vc:promotion restaurant-id=" @restaurantId" />
+        }
+
+        <div class="cart-summary p-0 mb-2 mt-3">
+            <div class="justify-content-between mb-1 mt-3" id="originalPriceRow" style="display: none;">
+                <span>Giá gốc:</span>
+                <span class="text-muted" id="originalPrice" style="text-decoration: line-through;">0đ</span>
+            </div>
+            <div class="justify-content-between mb-1" id="discountRow" style="display: none;">
+                <span>Đã giảm:</span>
+                <span class="text-success" id="discountAmount">0đ</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <h5 class="mb-0 fw-bold">Tổng tiền:</h5>
+                <h5 id="cartTotal" class="mb-0 text-danger" style="font-weight: bold; font-size: 20px;">0đ</h5>
+            </div>
         </div>
 
         @if (!string.IsNullOrEmpty(idTable.ToString()) && !string.IsNullOrEmpty(restaurantId.ToString()))
@@ -22,109 +41,11 @@
     </div>
 </div>
 
-<style>
-    * {
-        margin: 0;
-        padding: 0;
-        font-family: Arial, Helvetica, sans-serif !important;
-    }
-
-    .cart-container {
-        padding: 20px;
-        max-width: 800px;
-        margin: 0 auto;
-    }
-
-    .cart-item-container {
-        display: flex;
-        flex-grow: 1;
-        flex-direction: column;
-        justify-content: space-between;
-    }
-
-    .cart-item {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        padding: 16px;
-        margin-bottom: 16px;
-    }
-
-    .cart-item-image {
-        width: 80px;
-        height: 80px;
-        border-radius: 8px;
-        object-fit: cover;
-    }
-
-    .cart-item-details {
-        flex-grow: 1;
-    }
-
-    .cart-item-name {
-        font-weight: 600;
-        font-size: 16px;
-        margin-bottom: 6px;
-    }
-
-    .cart-item-options {
-        font-size: 12px;
-        color: #666;
-        margin-bottom: 12px;
-    }
-
-    .cart-item-price {
-        color: #5D5D5D;
-        font-size: 16px;
-        font-weight: bold;
-    }
-
-    .cart-item-quantity {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .quantity-btn {
-        width: 24px;
-        height: 24px;
-        border: none;
-        background: #E31837;
-        color: white;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-    }
-
-    .quantity-input {
-        width: 32px;
-        height: 24px;
-        text-align: center;
-        border: 1px solid #E9E9E9;
-        border-radius: 4px;
-    }
-
-    .cart-summary {
-        position: sticky;
-        bottom: 0;
-        background: white;
-        padding: 16px;
-        border-top: 1px solid #E9E9E9;
-    }
-
-    input[type=number]::-webkit-outer-spin-button,
-    input[type=number]::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-</style>
-
 @section Scripts {
     <script>
         const id_table = '@idTable';
         const restaurant_id = '@restaurantId';
+
 
         @* Hàm fetch API *@
             async function apiFetch(url, method = 'GET', data = null, headers = { 'Content-Type': 'application/json' }) {
@@ -167,38 +88,40 @@
                 if (checkoutBtn) checkoutBtn.disabled = false;
                 cartItemsContainer.innerHTML = cartItems.map((item, index) => {
                     return `
-                    <div class="cart-item">
-                        <button class="btn btn-sm d-flex justify-content-center align-items-center btn-outline-danger remove-btn p-0 m-0 border-1"
-                            style="width: 24px; height: 24px; align-self: flex-end; border-radius: 6px">
-                            <i class="bi bi-trash" style="font-size: 14px; line-height: 1;"></i>
-                        </button>
-                        <div class="cart-items-detail d-flex flex-row" style="gap: 12px">
-                            <div class="cart-item-container">
-                                <div class="cart-item-details">
-                                    <div class="cart-item-name">${item.name}</div>
-                                    <div class="cart-item-options">
-                                        ${item.toppings && item.toppings.length > 0 ? `Topping: ${item.toppings.join(', ')}` : ''}
-                                    </div>
-                                </div>
-                                <div class="d-flex flex-row justify-content-between align-items-center">
-                                    <div class="cart-item-quantity">
-                                        <button class="quantity-btn" onclick="updateQuantity(${index}, -1)">-</button>
-                                        <input type="number" class="quantity-input" style="color: #5F6368; font-size:12px" value="${item.quantity}"
-                                            min="1" max="99" onchange="updateQuantity(${index}, 0, this.value)">
-                                            <button class="quantity-btn" onclick="updateQuantity(${index}, 1)">+</button>
-                                    </div>
-                                    <div class="cart-item-price">${(item.price * item.quantity).toLocaleString('vi-VN')}đ</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                        `
+                                                                                                                                                                                                                                                                        <div class="cart-item">
+                                                                                                                                                                                                                                                                            <button class="btn btn-sm d-flex justify-content-center align-items-center btn-outline-danger remove-btn p-0 m-0 border-1"
+                                                                                                                                                                                                                                                                                    style="width: 24px; height: 24px; align-self: flex-end; border-radius: 6px" onclick="deleteItem('${item.id}')">
+                                                                                                                                                                                                                                                                                    <i class="bi bi-trash"></i>
+                                                                                                                                                                                                                                                                            </button>
+                                                                                                                                                                                                                                                                            <div class="cart-items-detail d-flex flex-row" style="gap: 12px">
+                                                                                                                                                                                                                                                                                <div class="cart-item-image">
+                                                                                                                                                                                                                                                                                    <img src="${item.image}" alt="${item.name}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">
+                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                                <div class="cart-item-container">
+                                                                                                                                                                                                                                                                                    <div class="cart-item-details">
+                                                                                                                                                                                                                                                                                        <div class="cart-item-name">${item.name}</div>
+                                                                                                                                                                                                                                                                                        <div class="cart-item-options">
+                                                                                                                                                                                                                                                                                            ${item.toppings && item.toppings.length > 0 ? `Topping: ${item.toppings.join(', ')}` : ''}
+                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                    <div class="d-flex flex-row justify-content-between align-items-center">
+                                                                                                                                                                                                                                                                                        <div class="cart-item-quantity">
+                                                                                                                                                                                                                                                                                            <button class="quantity-btn" onclick="updateQuantity(${index}, -1)">-</button>
+                                                                                                                                                                                                                                                                                            <input type="number" class="quantity-input" style="color: #5F6368; font-size:12px" value="${item.quantity}"
+                                                                                                                                                                                                                                                                                                min="1" max="99" onchange="updateQuantity(${index}, 0, this.value)">
+                                                                                                                                                                                                                                                                                                <button class="quantity-btn" onclick="updateQuantity(${index}, 1)">+</button>
+                                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                                        <div class="cart-item-price">${(item.price * item.quantity).toLocaleString('vi-VN')}đ</div>
+                                                                                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                                                            </div>
+                                                                                                                                                                                                                                                                        </div>
+                                                                                                                                                                                                                                                                            `
                 }).join('');
 
 
                 // Update total
-                const total = cartItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
-                document.getElementById('cartTotal').textContent = total.toLocaleString('vi-VN') + 'đ';
+                updateCartTotal(cartItems);
             }
 
         @* Hàm update số lượng *@
@@ -219,19 +142,66 @@
             }
 
         @* Hàm xóa giỏ hàng *@
-            function clearCart() {
+            function deleteItem(itemId) {
                 if (confirm('Bạn có chắc chắn muốn xóa giỏ hàng?')) {
-                    localStorage.removeItem('cartItems');
-                    loadCartItems();
+                    fetch('https://jollicowfe-production.up.railway.app/api/admin/carts/' + itemId, {
+                        method: 'DELETE'
+                    })
+                        .then(res => {
+                            if (res.ok) {
+                                // reload lại trang, hoặc update giao diện
+                                location.reload();
+                            } else {
+                                alert('Xoá thất bại!');
+                            }
+                        });
                 }
             }
 
         @* Hàm update tổng tiền *@
-            function updateCartTotal() {
-                const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+            function updateCartTotal(cartItems) {
+                if (!cartItems || cartItems.length === 0) {
+                    document.getElementById('cartTotal').textContent = '0đ';
+                    document.getElementById('originalPrice').style.display = 'none';
+                    return;
+                }
+
                 const total = cartItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
-                document.getElementById('cartTotal').textContent = total.toLocaleString('vi-VN') + 'đ';
+                const voucherData = JSON.parse(localStorage.getItem('voucher') || null);
+
+                if (voucherData) {
+                    const { percent, minPrice, maxDiscount } = voucherData;
+                    const cartTotalElement = document.getElementById('cartTotal');
+                    const originalPriceElement = document.getElementById('originalPrice');
+                    const originalPriceRowElement = document.getElementById('originalPriceRow');
+                    const discountAmountElement = document.getElementById('discountAmount');
+                    const discountRowElement = document.getElementById('discountRow');
+
+                    if (percent > 0) {
+                        var discounted = Math.round(total * (1 - percent / 100));
+
+                        if (total - discounted >= maxDiscount) {
+                            discounted = total - maxDiscount;
+                        }
+
+                        cartTotalElement.textContent = discounted.toLocaleString('vi-VN') + 'đ';
+                        originalPriceElement.style.display = 'flex';
+                        originalPriceRowElement.style.display = 'flex';
+                        originalPriceElement.textContent = total.toLocaleString('vi-VN') + 'đ';
+
+                        discountAmountElement.style.display = 'flex';
+                        discountRowElement.style.display = 'flex';
+                        discountAmountElement.textContent = (total - discounted).toLocaleString('vi-VN') + 'đ';
+                    } else {
+                        cartTotalElement.textContent = total.toLocaleString('vi-VN') + 'đ';
+                        originalPriceElement.style.display = 'none';
+                        originalPriceRowElement.style.display = 'none';
+                        discountAmountElement.style.display = 'none';
+                        discountRowElement.style.display = 'none';
+                    }
+                }
             }
+
 
         @* Hàm đặt món *@
             function checkout() {
@@ -257,98 +227,19 @@
                     loadCartItems();
                 }
             }
-
-        @* Hàm cập nhật nút thanh toán dựa trên phương thức được chọn *@
-            function updatePaymentButton() {
-                const paymentMethod = document.getElementById('paymentMethod').value;
-                const paymentButton = document.getElementById('paymentButton');
-
-                if (!paymentMethod) {
-                    paymentButton.textContent = 'Chọn phương thức thanh toán';
-                    paymentButton.disabled = true;
-                    paymentButton.className = 'btn btn-secondary w-100';
-                    return;
-                }
-
-                paymentButton.disabled = false;
-                paymentButton.className = 'btn btn-success w-100';
-
-                switch (paymentMethod) {
-                    case 'vietqr':
-                        paymentButton.textContent = 'Thanh toán VietQR';
-                        break;
-                    case 'vnpay':
-                        paymentButton.textContent = 'Thanh toán VNPay';
-                        break;
-                    case 'cash':
-                        paymentButton.textContent = 'Thanh toán tiền mặt';
-                        break;
-                    case 'card':
-                        paymentButton.textContent = 'Thanh toán thẻ';
-                        break;
-                    default:
-                        paymentButton.textContent = 'Thanh toán';
-                }
-            }
-
-        @* Hàm xử lý thanh toán *@
-            function processPayment() {
-                const paymentMethod = document.getElementById('paymentMethod').value;
-
-                if (!paymentMethod) {
-                    alert('Vui lòng chọn phương thức thanh toán!');
-                    return;
-                }
-
-                switch (paymentMethod) {
-                    case 'vietqr':
-                        redirectToVietQR();
-                        break;
-                    case 'vnpay':
-                        redirectToVNPay();
-                        break;
-                    case 'cash':
-                        processCashPayment();
-                        break;
-                    case 'card':
-                        processCardPayment();
-                        break;
-                    default:
-                        alert('Phương thức thanh toán không hợp lệ!');
-                }
-            }
-
-        @* Hàm chuyển hướng đến VietQR *@
-            async function redirectToVietQR() {
-                const urlParams = new URLSearchParams(window.location.search);
-                const acsc = urlParams.get('acsc');
-                if (acsc) {
-                    window.location.href = `/Payment/VietQR?acsc=${encodeURIComponent(acsc)}`;
-                } else {
-                    alert('Không tìm thấy mã truy cập hợp lệ.');
-                }
-            }
-
-        @* Hàm chuyển hướng đến VNPay *@
-            function redirectToVNPay() {
-                // TODO: Implement VNPay redirect
-                alert('Tính năng VNPay đang được phát triển!');
-            }
-
-        @* Hàm xử lý thanh toán tiền mặt *@
-            function processCashPayment() {
-                if (confirm('Bạn có chắc chắn muốn thanh toán bằng tiền mặt?')) {
-                    // TODO: Implement cash payment logic
-                    alert('Đơn hàng đã được xác nhận. Vui lòng thanh toán tiền mặt khi nhận hàng!');
-                }
-            }
-
-        @* Hàm xử lý thanh toán thẻ *@
-            function processCardPayment() {
-                // TODO: Implement card payment logic
-                alert('Tính năng thanh toán thẻ đang được phát triển!');
-            }
-
         document.addEventListener('DOMContentLoaded', loadCartItems);
+
+        window.addEventListener("voucherApplied", () => {
+            loadCartItems();
+        });
+
+        window.addEventListener('load', () => {
+            const isCheckout = sessionStorage.getItem('checkoutInProgress');
+            if (!isCheckout) {
+                localStorage.removeItem('voucher');
+            } else {
+                sessionStorage.removeItem('checkoutInProgress');
+            }
+        });
     </script>
 }

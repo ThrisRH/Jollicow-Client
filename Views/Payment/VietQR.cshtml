@@ -33,8 +33,9 @@ else
                         <input type="hidden" name="acsc" value="@Context.Request.Query["acsc"]" />
                         <button type="submit" class="btn btn-success w-100">Đã thanh toán</button>
                     </form>
-                    <a href="@Url.Action("CartDetail", "Cart", new { acsc = Context.Request.Query["acsc"] })"
-                        class="btn btn-secondary">Quay lại giỏ hàng</a>
+                    <a href="@Url.Action("CartDetail", "Cart", new { acsc = Context.Request.Query["acsc"], })"
+                        class="btn btn-secondary" onclick="sessionStorage.removeItem('checkoutInProgress')">Quay lại giỏ
+                        hàng</a>
                 </div>
             </div>
         </div>

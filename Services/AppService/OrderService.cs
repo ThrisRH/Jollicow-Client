@@ -11,6 +11,8 @@ public class OrderRequest
     public string id_table { get; set; } = String.Empty;
     [JsonProperty("id_restaurant")]
     public string id_restaurant { get; set; } = String.Empty;
+    [JsonProperty("payment")]
+    public string pyamentMethod { get; set; } = String.Empty;
 }
 public class OrderService
 {
@@ -28,10 +30,11 @@ public class OrderService
         var request = new OrderRequest
         {
             id_table = id_table,
-            id_restaurant = id_restaurant
+            id_restaurant = id_restaurant,
+            pyamentMethod = "Thanh toán trực tiếp"
         };
 
-        var url = $"https://jollicowfe-production.up.railway.app/api/carts/createALL";
+        var url = $"https://jollicowfe-production.up.railway.app/api/admin/carts/createALL";
         var response = await _httpClient.PostAsJsonAsync(url, request);
 
         if (response.StatusCode == HttpStatusCode.NotFound)

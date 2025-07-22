@@ -14,13 +14,13 @@
 <!-- Payment Button -->
 <button class="button w-100" style="height: 48px;" type="button" id="paymentButton" onclick="processPayment()" disabled>
     <span class="button-text">Chọn phương thức thanh toán</span>
-    Chọn phương thức thanh toán
 </button>
 
 <style>
     .form-select {
         border: 1px solid #E9E9E9;
-        border-radius: 6px;
+        border-radius: 16px;
+        height: 40px;
         padding: 8px 12px;
         font-size: 14px;
     }
@@ -43,30 +43,47 @@
             const paymentButton = document.getElementById('paymentButton');
 
             if (!paymentMethod) {
-                paymentButton.textContent = 'Chọn phương thức thanh toán';
                 paymentButton.disabled = true;
-                paymentButton.className = 'button w-100';
+                paymentButton.textContent = 'Chọn phương thức thanh toán';
+                paymentButton.className = 'btn w-100';
+                paymentButton.style.backgroundColor = '#cccccc';
+                paymentButton.style.borderRadius = '16px';
+                paymentButton.style.color = '#666666';
+                paymentButton.style.fontWeight = 'normal';
                 return;
             }
 
             paymentButton.disabled = false;
-            paymentButton.className = 'button w-100';
+            paymentButton.className = 'btn w-100';
+            paymentButton.style.backgroundColor = '#E31837';
+            paymentButton.style.borderRadius = '16px';
+            paymentButton.style.color = 'white';
+            paymentButton.style.fontWeight = 'bold';
 
             switch (paymentMethod) {
                 case 'vietqr':
                     paymentButton.textContent = 'Thanh toán VietQR';
                     break;
+                case 'vnpay':
+                    paymentButton.textContent = 'Thanh toán VNPay';
+                    break;
                 case 'cash':
                     paymentButton.textContent = 'Thanh toán tiền mặt';
+                    break;
+                case 'card':
+                    paymentButton.textContent = 'Thanh toán thẻ';
                     break;
                 default:
                     paymentButton.textContent = 'Thanh toán';
             }
         }
 
+
     @* Hàm xử lý thanh toán *@
         function processPayment() {
             const paymentMethod = document.getElementById('paymentMethod').value;
+            sessionStorage.setItem('checkoutInProgress', 'true');
+
 
             if (!paymentMethod) {
                 alert('Vui lòng chọn phương thức thanh toán!');
@@ -77,8 +94,14 @@
                 case 'vietqr':
                     redirectToVietQR();
                     break;
+                case 'vnpay':
+                    redirectToVNPay();
+                    break;
                 case 'cash':
                     processCashPayment();
+                    break;
+                case 'card':
+                    processCardPayment();
                     break;
                 default:
                     alert('Phương thức thanh toán không hợp lệ!');
@@ -95,12 +118,25 @@
                 alert('Không tìm thấy mã truy cập hợp lệ.');
             }
         }
+
+    @* Hàm chuyển hướng đến VNPay *@
+        function redirectToVNPay() {
+            // TODO: Implement VNPay redirect
+            alert('Tính năng VNPay đang được phát triển!');
+        }
+
     @* Hàm xử lý thanh toán tiền mặt *@
         function processCashPayment() {
             if (confirm('Bạn có chắc chắn muốn thanh toán bằng tiền mặt?')) {
                 // TODO: Implement cash payment logic
                 alert('Đơn hàng đã được xác nhận. Vui lòng thanh toán tiền mặt khi nhận hàng!');
             }
+        }
+
+    @* Hàm xử lý thanh toán thẻ *@
+        function processCardPayment() {
+            // TODO: Implement card payment logic
+            alert('Tính năng thanh toán thẻ đang được phát triển!');
         }
 
 

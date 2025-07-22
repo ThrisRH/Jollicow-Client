@@ -7,12 +7,13 @@ namespace Jollicow.Controllers
     {
         private readonly ILogger<CartController> _logger;
         private readonly TokenService _tokenService;
-        private readonly FirebaseService _firebaseService;
+        private readonly ICartService _cartService;
 
-        public CartController(ILogger<CartController> logger, TokenService tokenService)
+        public CartController(ILogger<CartController> logger, TokenService tokenService, ICartService cartService)
         {
             _logger = logger;
             _tokenService = tokenService;
+            _cartService = cartService;
         }
 
         [HttpGet("/cart/cartdetail")]
@@ -37,6 +38,19 @@ namespace Jollicow.Controllers
             ViewData["IdTable"] = id_table;
             ViewData["RestaurantId"] = restaurant_id;
             return View();
+        }
+
+        [HttpDelete("/cart/deleteitem")]
+        public async Task<IActionResult> DeleteItem(string id, string acsc)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return BadRequest("Thiếu ID cần xoá.");
+            }
+
+            await _cartService.DeleteCart(id);
+
+            return RedirectToAction("CartDetail", new { acsc = acsc });
         }
     }
 }

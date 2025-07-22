@@ -80,14 +80,17 @@
         document.getElementById('dish-list-container').style.display = 'none';
 
         const allButtons = document.querySelectorAll('.scroll-slider button');
-
-        // Xóa chỉ class active, giữ nguyên slider-btn
         allButtons.forEach(btn => btn.classList.remove('slider-btn-active'));
-
-        // Gán class active cho nút được click
         buttonElement.classList.add('slider-btn-active');
 
-        fetch(`/Menu/GetDishesByCategory?id_category=${categoryId}&restaurant_id=${restaurantId}`)
+        // 🔥 Lấy acsc từ URL hiện tại
+        const urlParams = new URLSearchParams(window.location.search);
+        const acsc = urlParams.get('acsc');
+
+        // 🔁 Gọi lại API kèm theo acsc nếu có
+        const fetchUrl = `/Menu/GetDishesByCategory?id_category=${categoryId}&restaurant_id=${restaurantId}${acsc ? `&acsc=${acsc}` : ''}`;
+
+        fetch(fetchUrl)
             .then(response => response.text())
             .then(html => {
                 document.getElementById('dish-list-container').innerHTML = html;

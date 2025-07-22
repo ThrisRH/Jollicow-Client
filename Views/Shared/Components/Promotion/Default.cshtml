@@ -1,0 +1,119 @@
+@model List<PromotionModel>
+<style>
+    .voucher-item.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+</style>
+<div class="voucher-input-wrapper" style="position: relative; display: inline-block; width: 100%;">
+    <label for="voucherInput" class="form-label fw-bold mb-2">Chọn voucher:</label>
+    <div style="position: relative; display: inline-block; width: 100%;">
+        <input
+            style="height: 40px; border-radius: 16px; background-color: #fff; border: 1px solid #E9E9E9; padding: 0 40px 0 16px; width: 100%;"
+            type="text" id="voucherInput" class="form-control" placeholder="Chọn voucher" readonly />
+
+        <!-- Icon bên phải -->
+        <p style="position: absolute; top: 50%; right: 16px; transform: translateY(-50%); color: #999;">></p>
+    </div>
+
+    <div id="overlay" style="
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.4); 
+    z-index: 999;
+    "></div>
+
+    <div id="voucherPopup" class="voucher-popup" style="
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            height: 40vh;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 12px;
+        ">
+        @foreach (var promotion in Model)
+        {
+            <div class="voucher-item d-flex flex-row mb-3" data-minprice="@promotion.MinOrderValue"
+                data-maxdiscount="@promotion.MaxDiscount" data-name="@promotion.Title" data-percent="@promotion.Percent">
+                <img src="../lib/images/JolliVoucher.png"
+                    style=" border-radius: 2px 0px 0px 2px; width: 100px; height: auto; object-fit: cover;">
+                <div class="d-flex flex-column"
+                    style="border: 1px solid #ccc; border-radius: 0px 2px 2px 0px; gap: 12px; padding: 6px 12px; cursor: pointer;">
+                    <div class="d-flex flex-column" style="gap:2px)">
+                        <div class="d-flex justify-content-between">
+                            <div class="fw-bold" style="font-size: 14px;">@promotion.Title</div>
+                        </div>
+                        <div style="color:#303030 ; font-size: 12px;">@promotion.TitleSub</div>
+                    </div>
+                    <p class="text-muted m-0" style="text-align: right; font-size: 12px;">HSD:
+                        @promotion.DateEnd.ToString("dd/MM/yyyy")</p>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const input = document.getElementById("voucherInput");
+        const popup = document.getElementById("voucherPopup");
+        const overlay = document.getElementById("overlay");
+
+        input.addEventListener("click", () => {
+            const isVisible = popup.style.display === "block";
+            popup.style.display = isVisible ? "none" : "block";
+            overlay.style.display = isVisible ? "none" : "block";
+        });
+
+        document.querySelectorAll(".voucher-item").forEach(item => {
+            item.addEventListener("click", () => {
+                input.value = item.dataset.name;
+                popup.style.display = "none";
+                overlay.style.display = "none";
+
+
+                const voucher = {
+                    percent: parseFloat(item.dataset.percent),
+                    minPrice: parseFloat(item.dataset.minprice),
+                    maxDiscount: parseFloat(item.dataset.maxdiscount)
+                };
+
+
+                localStorage.setItem("voucher", JSON.stringify(voucher));
+                window.dispatchEvent(new CustomEvent("voucherApplied"));
+            });
+        });
+
+        overlay.addEventListener("click", () => {
+            popup.style.display = "none";
+            overlay.style.display = "none";
+        });
+    });
+
+    function checkVoucherEligibility(minPrice) {
+        const total = parseFloat(localStorage.getItem("cart_total") || "0");
+        console.log("total:", total);
+        console.log("minPrice:", minPrice);
+        return total >= minPrice;
+    }
+
+    document.querySelectorAll(".voucher-item").forEach((el) => {
+        const minPrice = parseFloat(el.dataset.minprice || "0");
+        if (checkVoucherEligibility(minPrice)) {
+            el.classList.remove("disabled");
+        } else {
+            el.classList.add("disabled");
+        }
+    });
+</script>

@@ -48,6 +48,8 @@ async function updateCartTotalUI() {
       0
     );
 
+    localStorage.setItem("cart_total", total);
+
     const cartTotalElement = document.getElementById("cartTotalPrice");
     if (cartTotalElement) {
       cartTotalElement.textContent = total.toLocaleString("vi-VN") + "đ";

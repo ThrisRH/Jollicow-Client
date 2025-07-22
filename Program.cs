@@ -19,6 +19,8 @@ builder.Services.AddDataProtection();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<ToppingService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<PromotionService>();
+builder.Services.AddScoped<ICartService, CartService>();
 
 var app = builder.Build();
 
