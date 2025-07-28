@@ -4,7 +4,6 @@
     var idTable = ViewData["IdTable"]?.ToString() ?? "";
     var restaurantId = ViewData["RestaurantId"]?.ToString() ?? "";
     var paymentInfo = ViewData["PaymentInfo"] as PaymentInfo;
-    var amount = ViewData["Amount"] != null ? Convert.ToInt32(ViewData["Amount"]) : 0;
     var description = ViewData["Description"]?.ToString() ?? "";
     var accountName = paymentInfo?.AccountName ?? "";
 
@@ -23,14 +22,16 @@ else
             <div class="card-body text-center">
                 <h3 class="mb-3 fw-bold">Chuyển khoản VietQR</h3>
                 <div class="mb-3">
-                    <img src="https://img.vietqr.io/image/MB-0389105492-print.jpg?amount=@amount&addInfo=@encodedDesc&accountName=@encodedName"
-                        alt="VietQR" class="img-fluid" style="; max-height: 400px;"
-                        onerror="this.onerror=null;this.src='https://img.vietqr.io/image/VCB-123456789-compact2.png?amount=100000&addInfo=Demo';" />
+                    <img id="vietqrImage"
+                        src="https://img.vietqr.io/image/MB-0389105492-print.jpg?amount=0&addInfo=@encodedDesc&accountName=@encodedName"
+                        class="img-fluid" style="max-height: 400px;" />
+
                 </div>
 
                 <div class="action-field d-flex flex-column gap-3  mt-3">
-                    <form asp-controller="Payment" asp-action="Create" method="post">
+                    <form asp-controller="Payment" asp-action="Create" method="post" onsubmit="attachOrderData()">
                         <input type="hidden" name="acsc" value="@Context.Request.Query["acsc"]" />
+                        <input type="hidden" name="voucherId" id="voucherIdInput" />
                         <button type="submit" class="btn btn-success w-100">Đã thanh toán</button>
                     </form>
                     <a href="@Url.Action("CartDetail", "Cart", new { acsc = Context.Request.Query["acsc"], })"
@@ -41,3 +42,22 @@ else
         </div>
     </div>
 }
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const cartTotal = localStorage.getItem('cartTotalAfterDiscount');
+        if (cartTotal) {
+            const img = document.getElementById('vietqrImage');
+            const url = new URL(img.src);
+
+            url.searchParams.set('amount', parseInt(cartTotal));
+
+            img.src = url.toString();
+        }
+    });
+
+    function attachOrderData() {
+        const voucherId = localStorage.getItem("voucher_id");
+        document.getElementById("voucherIdInput").value = voucherId || "";
+    }
+</script>

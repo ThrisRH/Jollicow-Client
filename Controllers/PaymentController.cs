@@ -56,13 +56,12 @@ namespace Jollicow.Controllers
             return View();
         }
 
+        //  Tạo order áp dụng cho VietQR
         [HttpPost]
-        public async Task<IActionResult> Create(string acsc)
+        public async Task<IActionResult> Create(string acsc, string? voucherId = null, string? paymentMethod = null)
         {
-
             try
             {
-                // Lấy thông tin từ mã hóa (giống như CartController và MenuController)
                 var decrypted = _tokenService.TryDecrypt(acsc);
                 if (decrypted == null)
                 {
@@ -76,18 +75,48 @@ namespace Jollicow.Controllers
                 {
                     return BadRequest("Thiếu thông tin.");
                 }
-                await _orderService.CreateOrder(idTable, restaurantId);
-                TempData["Success"] = "Đặt thành công";
-                _logger.LogInformation($"Đơn hàng đã được tạo thành công cho Bàn {idTable} tại Nhà hàng {restaurantId}.");
+
+                _logger.LogInformation($"Voucher ID: {voucherId ?? "null"}");
+
+                if (paymentMethod == "vnpay")
+                {
+                    try
+                    {
+                        var vnpay_url = await _orderService.CreateOrder(idTable, restaurantId, voucherId, paymentMethod);
+                        if (!string.IsNullOrEmpty(vnpay_url))
+                        {
+                            _logger.LogInformation($"VNPay URL: {vnpay_url}");
+
+                            // Trả về JSON response thay vì redirect trực tiếp
+                            return Json(new { success = true, paymentUrl = vnpay_url });
+                        }
+                        else
+                        {
+                            _logger.LogError("Không nhận được URL thanh toán VNPay");
+                            return Json(new { success = false, error = "Lỗi khi tạo đơn hàng." });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError($"Lỗi khi tạo đơn hàng VNPay: {ex.Message}");
+                        return Json(new { success = false, error = $"Lỗi khi tạo đơn hàng: {ex.Message}" });
+                    }
+                }
+                else
+                {
+                    await _orderService.CreateOrder(idTable, restaurantId, voucherId);
+                }
 
             }
             catch (Exception ex)
             {
+                _logger.LogError($"Lỗi trong PaymentController.Create: {ex.Message}");
                 TempData["Error"] = $"Lỗi khi đặt đơn: {ex.Message}";
             }
 
             return RedirectToAction("Confirmation", "Payment", new { acsc = acsc });
         }
+
 
         [HttpGet]
         public IActionResult Confirmation()

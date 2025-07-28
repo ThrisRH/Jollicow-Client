@@ -46,197 +46,176 @@
         const id_table = '@idTable';
         const restaurant_id = '@restaurantId';
 
+        async function apiFetch(url, method = 'GET', data = null, headers = { 'Content-Type': 'application/json' }) {
+            const options = { method, headers };
+            if (data) options.body = JSON.stringify(data);
+            const response = await fetch(url, options);
+            if (!response.ok) throw new Error(`API error: ${response.status}`);
+            return response.json();
+        }
 
-        @* Hàm fetch API *@
-            async function apiFetch(url, method = 'GET', data = null, headers = { 'Content-Type': 'application/json' }) {
-                const options = {
-                    method,
-                    headers
-                };
-                if (data) {
-                    options.body = JSON.stringify(data);
-                }
-                console.log('data', data)
-                const response = await fetch(url, options);
-                if (!response.ok) {
-                    throw new Error(`API error: ${response.status}`);
-                }
-                return response.json();
+        async function loadCartItems() {
+            const cartItemsContainer = document.getElementById('cartItemsContainer');
+            const checkoutBtn = document.getElementById('checkoutBtn');
+
+            const payload = { id_table: id_table, id_restaurant: restaurant_id };
+            const response = await apiFetch('https://jollicowfe-production.up.railway.app/api/admin/carts/filter', 'POST', payload);
+            const cartItems = response.carts || [];
+
+            if (cartItems.length === 0) {
+                cartItemsContainer.innerHTML = '<div class="text-center py-4">Giỏ hàng đang trống</div>';
+                if (checkoutBtn) checkoutBtn.disabled = true;
+                document.getElementById('cartTotal').textContent = '0đ';
+                return;
             }
 
-        @* Hàm load giỏ hàng *@
-            async function loadCartItems() {
-                const cartItemsContainer = document.getElementById('cartItemsContainer');
-                const checkoutBtn = document.getElementById('checkoutBtn');
+            if (checkoutBtn) checkoutBtn.disabled = false;
+            const cartUpdate = JSON.parse(localStorage.getItem('cart_update') || '{}');
+            cartItemsContainer.innerHTML = cartItems.map((item, index) => {
+                const displayQuantity = cartUpdate[item.id] ?? item.quantity;
+                return `
+                                                            <div class="cart-item" data-id="${item.id}" data-price="${item.price}">
+                                                                <button class="btn btn-sm d-flex justify-content-center align-items-center btn-outline-danger remove-btn p-0 m-0 border-1"
+                                                                        style="width: 24px; height: 24px; align-self: flex-end; border-radius: 6px" onclick="deleteItem('${item.id}')">
+                                                                        <i class="bi bi-trash"></i>
+                                                                </button>
+                                                                <div class="cart-items-detail d-flex flex-row" style="gap: 12px">
+                                                                    <div class="cart-item-image">
+                                                                        <img src="${item.image}" alt="${item.name}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">
+                                                                    </div>
+                                                                    <div class="cart-item-container">
+                                                                        <div class="cart-item-details">
+                                                                            <div class="cart-item-name">${item.name}</div>
+                                                                            <div class="cart-item-options">
+                                                                                ${item.toppings && item.toppings.length > 0 ? `Topping: ${item.toppings.join(', ')}` : ''}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="d-flex flex-row justify-content-between align-items-center">
+                                                                            <div class="cart-item-quantity">
+                                                                                <button class="quantity-btn" onclick="changeQuantity('${item.id}', -1)">-</button>
+                                                                                <input id="quantity-input-${item.id}" type="number" class="quantity-input" value="${displayQuantity}" style="color: #5F6368; font-size:12px" min="1" max="99" onchange="updateQuantityInput('${item.id}')">
+                                                                                <button class="quantity-btn" onclick="changeQuantity('${item.id}', 1)">+</button>
+                                                                            </div>
+                                                                            <div class="cart-item-price">${(item.price * displayQuantity).toLocaleString('vi-VN')}đ</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        `;
+            }).join('');
 
-                const payload = {
-                    id_table: id_table,
-                    id_restaurant: restaurant_id
-                };
+            updateCartTotal(cartItems);
+        }
 
-                const response = await apiFetch('https://jollicowfe-production.up.railway.app/api/admin/carts/filter', 'POST', payload)
-                const cartItems = response.carts || [];
-                console.log("cartItems", cartItems);
-                if (cartItems.length === 0) {
-                    cartItemsContainer.innerHTML = '<div class="text-center py-4">Giỏ hàng đang trống</div>';
-                    if (checkoutBtn) checkoutBtn.disabled = true;
-                    document.getElementById('cartTotal').textContent = '0đ';
-                    return;
-                }
+        function changeQuantity(itemId, delta) {
+            const cartUpdate = JSON.parse(localStorage.getItem('cart_update') || '{}');
+            const input = document.getElementById(`quantity-input-${itemId}`);
+            let current = cartUpdate[itemId] ?? Number(input.value);
+            let newQuantity = Math.max(1, Math.min(99, current + delta));
+            cartUpdate[itemId] = newQuantity;
+            localStorage.setItem('cart_update', JSON.stringify(cartUpdate));
+            input.value = newQuantity;
 
+            // Cập nhật lại tổng tiền tạm thời
+            updateCartTotalFromDOM();
+        }
 
-                if (checkoutBtn) checkoutBtn.disabled = false;
-                cartItemsContainer.innerHTML = cartItems.map((item, index) => {
-                    return `
-                                                                                                                                                                                                                                                                        <div class="cart-item">
-                                                                                                                                                                                                                                                                            <button class="btn btn-sm d-flex justify-content-center align-items-center btn-outline-danger remove-btn p-0 m-0 border-1"
-                                                                                                                                                                                                                                                                                    style="width: 24px; height: 24px; align-self: flex-end; border-radius: 6px" onclick="deleteItem('${item.id}')">
-                                                                                                                                                                                                                                                                                    <i class="bi bi-trash"></i>
-                                                                                                                                                                                                                                                                            </button>
-                                                                                                                                                                                                                                                                            <div class="cart-items-detail d-flex flex-row" style="gap: 12px">
-                                                                                                                                                                                                                                                                                <div class="cart-item-image">
-                                                                                                                                                                                                                                                                                    <img src="${item.image}" alt="${item.name}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">
-                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                                <div class="cart-item-container">
-                                                                                                                                                                                                                                                                                    <div class="cart-item-details">
-                                                                                                                                                                                                                                                                                        <div class="cart-item-name">${item.name}</div>
-                                                                                                                                                                                                                                                                                        <div class="cart-item-options">
-                                                                                                                                                                                                                                                                                            ${item.toppings && item.toppings.length > 0 ? `Topping: ${item.toppings.join(', ')}` : ''}
-                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                    <div class="d-flex flex-row justify-content-between align-items-center">
-                                                                                                                                                                                                                                                                                        <div class="cart-item-quantity">
-                                                                                                                                                                                                                                                                                            <button class="quantity-btn" onclick="updateQuantity(${index}, -1)">-</button>
-                                                                                                                                                                                                                                                                                            <input type="number" class="quantity-input" style="color: #5F6368; font-size:12px" value="${item.quantity}"
-                                                                                                                                                                                                                                                                                                min="1" max="99" onchange="updateQuantity(${index}, 0, this.value)">
-                                                                                                                                                                                                                                                                                                <button class="quantity-btn" onclick="updateQuantity(${index}, 1)">+</button>
-                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                        <div class="cart-item-price">${(item.price * item.quantity).toLocaleString('vi-VN')}đ</div>
-                                                                                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                                                                                </div>
-                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                            `
-                }).join('');
+        async function syncCartUpdateToServer() {
+            const cartUpdate = JSON.parse(localStorage.getItem('cart_update') || '{}');
+            const updates = Object.entries(cartUpdate);
 
+            if (updates.length === 0) return;
 
-                // Update total
-                updateCartTotal(cartItems);
-            }
-
-        @* Hàm update số lượng *@
-            function updateQuantity(index, change, newValue) {
-                const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-
-                if (newValue !== undefined) {
-                    cartItems[index].quantity = parseInt(newValue) || 1;
-                } else {
-                    cartItems[index].quantity += change;
-                }
-
-                if (cartItems[index].quantity < 1) cartItems[index].quantity = 1;
-                if (cartItems[index].quantity > 99) cartItems[index].quantity = 99;
-
-                localStorage.setItem('cartItems', JSON.stringify(cartItems));
-                loadCartItems();
-            }
-
-        @* Hàm xóa giỏ hàng *@
-            function deleteItem(itemId) {
-                if (confirm('Bạn có chắc chắn muốn xóa giỏ hàng?')) {
-                    fetch('https://jollicowfe-production.up.railway.app/api/admin/carts/' + itemId, {
-                        method: 'DELETE'
-                    })
-                        .then(res => {
-                            if (res.ok) {
-                                // reload lại trang, hoặc update giao diện
-                                location.reload();
-                            } else {
-                                alert('Xoá thất bại!');
-                            }
-                        });
+            for (const [itemId, quantity] of updates) {
+                try {
+                    await fetch(`https://jollicowfe-production.up.railway.app/api/admin/carts/${itemId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ quantity: Number(quantity) })
+                    });
+                } catch (e) {
+                    // Có thể xử lý lỗi ở đây nếu cần
                 }
             }
+            localStorage.removeItem('cart_update');
+        }
 
-        @* Hàm update tổng tiền *@
-            function updateCartTotal(cartItems) {
-                if (!cartItems || cartItems.length === 0) {
-                    document.getElementById('cartTotal').textContent = '0đ';
-                    document.getElementById('originalPrice').style.display = 'none';
-                    return;
+        function deleteItem(itemId) {
+            if (!confirm('Bạn có chắc chắn muốn xóa món này khỏi giỏ hàng?')) return;
+
+            fetch('https://jollicowfe-production.up.railway.app/api/admin/carts/' + itemId, {
+                method: 'DELETE'
+            })
+                .then(res => {
+                    if (res.ok) loadCartItems();
+                    else alert('Xoá thất bại!');
+                });
+        }
+
+        function updateCartTotal(cartItems) {
+            const total = cartItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
+            const voucherData = JSON.parse(localStorage.getItem('voucher') || null);
+
+            const cartTotalElement = document.getElementById('cartTotal');
+            const originalPriceElement = document.getElementById('originalPrice');
+            const originalPriceRowElement = document.getElementById('originalPriceRow');
+            const discountAmountElement = document.getElementById('discountAmount');
+            const discountRowElement = document.getElementById('discountRow');
+
+            if (voucherData && voucherData.percent > 0) {
+                const { percent, maxDiscount } = voucherData;
+                let discounted = Math.round(total * (1 - percent / 100));
+                if (total - discounted >= maxDiscount) {
+                    discounted = total - maxDiscount;
                 }
 
-                const total = cartItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
-                const voucherData = JSON.parse(localStorage.getItem('voucher') || null);
+                cartTotalElement.textContent = discounted.toLocaleString('vi-VN') + 'đ';
+                originalPriceElement.textContent = total.toLocaleString('vi-VN') + 'đ';
+                discountAmountElement.textContent = (total - discounted).toLocaleString('vi-VN') + 'đ';
 
-                if (voucherData) {
-                    const { percent, minPrice, maxDiscount } = voucherData;
-                    const cartTotalElement = document.getElementById('cartTotal');
-                    const originalPriceElement = document.getElementById('originalPrice');
-                    const originalPriceRowElement = document.getElementById('originalPriceRow');
-                    const discountAmountElement = document.getElementById('discountAmount');
-                    const discountRowElement = document.getElementById('discountRow');
+                originalPriceRowElement.style.display = 'flex';
+                discountRowElement.style.display = 'flex';
 
-                    if (percent > 0) {
-                        var discounted = Math.round(total * (1 - percent / 100));
-
-                        if (total - discounted >= maxDiscount) {
-                            discounted = total - maxDiscount;
-                        }
-
-                        cartTotalElement.textContent = discounted.toLocaleString('vi-VN') + 'đ';
-                        originalPriceElement.style.display = 'flex';
-                        originalPriceRowElement.style.display = 'flex';
-                        originalPriceElement.textContent = total.toLocaleString('vi-VN') + 'đ';
-
-                        discountAmountElement.style.display = 'flex';
-                        discountRowElement.style.display = 'flex';
-                        discountAmountElement.textContent = (total - discounted).toLocaleString('vi-VN') + 'đ';
-                    } else {
-                        cartTotalElement.textContent = total.toLocaleString('vi-VN') + 'đ';
-                        originalPriceElement.style.display = 'none';
-                        originalPriceRowElement.style.display = 'none';
-                        discountAmountElement.style.display = 'none';
-                        discountRowElement.style.display = 'none';
-                    }
-                }
+                localStorage.setItem('cartTotalAfterDiscount', discounted);
+            } else {
+                cartTotalElement.textContent = total.toLocaleString('vi-VN') + 'đ';
+                originalPriceRowElement.style.display = 'none';
+                discountRowElement.style.display = 'none';
             }
+        }
 
+        function updateCartTotalFromDOM() {
+            const cartUpdate = JSON.parse(localStorage.getItem('cart_update') || '{}');
+            let total = 0;
+            document.querySelectorAll('.cart-item').forEach(itemDiv => {
+                const itemId = itemDiv.dataset.id;
+                const price = parseFloat(itemDiv.dataset.price) || 0;
+                const quantity = cartUpdate[itemId] ?? Number(itemDiv.querySelector('.quantity-input').value);
+                total += price * quantity;
+                // Cập nhật lại giá từng món trên UI nếu muốn:
+                const priceDiv = itemDiv.querySelector('.cart-item-price');
+                if (priceDiv) priceDiv.textContent = (price * quantity).toLocaleString('vi-VN') + 'đ';
+            });
+            document.getElementById('cartTotal').textContent = total.toLocaleString('vi-VN') + 'đ';
+        }
 
-        @* Hàm đặt món *@
-            function checkout() {
-                const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-
-                if (cartItems.length === 0) {
-                    alert('Giỏ hàng trống!');
-                    return;
-                }
-
-                // Đây là chỗ để gọi API gửi order về server (nếu có)
-                alert('Đặt món thành công!');
-                localStorage.removeItem('cartItems');
-                loadCartItems();
-            }
-
-        @* Hàm xóa món *@
-            function removeItem(index) {
-                if (confirm('Bạn có chắc chắn muốn xóa món này khỏi giỏ hàng?')) {
-                    const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-                    cartItems.splice(index, 1);
-                    localStorage.setItem('cartItems', JSON.stringify(cartItems));
-                    loadCartItems();
-                }
-            }
         document.addEventListener('DOMContentLoaded', loadCartItems);
 
-        window.addEventListener("voucherApplied", () => {
-            loadCartItems();
+        window.addEventListener('voucherApplied', loadCartItems);
+
+        window.addEventListener('beforeunload', syncCartUpdateToServer);
+
+        document.getElementById('checkoutBtn')?.addEventListener('click', async function () {
+            await syncCartUpdateToServer();
+            // Tiếp tục chuyển sang trang thanh toán
         });
 
         window.addEventListener('load', () => {
             const isCheckout = sessionStorage.getItem('checkoutInProgress');
             if (!isCheckout) {
                 localStorage.removeItem('voucher');
+                localStorage.removeItem('cartTotalAfterDiscount');
+                localStorage.removeItem('voucher_id');
             } else {
                 sessionStorage.removeItem('checkoutInProgress');
             }

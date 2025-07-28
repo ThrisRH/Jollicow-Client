@@ -45,7 +45,8 @@
         @foreach (var promotion in Model)
         {
             <div class="voucher-item d-flex flex-row mb-3" data-minprice="@promotion.MinOrderValue"
-                data-maxdiscount="@promotion.MaxDiscount" data-name="@promotion.Title" data-percent="@promotion.Percent">
+                data-maxdiscount="@promotion.MaxDiscount" data-name="@promotion.Title" data-percent="@promotion.Percent"
+                data-itemid="@promotion.IdPromotion">
                 <img src="../lib/images/JolliVoucher.png"
                     style=" border-radius: 2px 0px 0px 2px; width: 100px; height: auto; object-fit: cover;">
                 <div class="d-flex flex-column"
@@ -79,6 +80,7 @@
         document.querySelectorAll(".voucher-item").forEach(item => {
             item.addEventListener("click", () => {
                 input.value = item.dataset.name;
+                localStorage.setItem("voucher_id", item.dataset.itemid);
                 popup.style.display = "none";
                 overlay.style.display = "none";
 

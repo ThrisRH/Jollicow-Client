@@ -7,6 +7,7 @@
     <select class="form-select" id="paymentMethod" onchange="updatePaymentButton()">
         <option value="">Chọn phương thức thanh toán</option>
         <option value="vietqr">Chuyển khoản VietQR</option>
+        <option value="vnpay">Chuyển khoản VNPay</option>
         <option value="cash">Tiền mặt</option>
     </select>
 </div>
@@ -120,9 +121,60 @@
         }
 
     @* Hàm chuyển hướng đến VNPay *@
-        function redirectToVNPay() {
-            // TODO: Implement VNPay redirect
-            alert('Tính năng VNPay đang được phát triển!');
+
+        async function redirectToVNPay() {
+            try {
+                // Clear any existing timers or animations
+                if (window.jQuery && window.jQuery.fx) {
+                    window.jQuery.fx.off = true;
+                }
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const acsc = urlParams.get('acsc');
+                const voucherId = localStorage.getItem('voucher_id') || '';
+
+                const formData = new URLSearchParams();
+                formData.append('acsc', acsc);
+                formData.append('voucherId', voucherId);
+                formData.append('paymentMethod', 'vnpay');
+
+                const response = await fetch('/Payment/Create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: formData
+                });
+
+                if (response.redirected) {
+                    // Clear any timers before redirect
+                    if (window.jQuery && window.jQuery.timers) {
+                        window.jQuery.timers = [];
+                    }
+
+                    // Use replace instead of href to avoid back button issues
+                    window.location.replace(response.url);
+                } else {
+                    const result = await response.text();
+                    console.log('Phản hồi không chuyển hướng:', result);
+
+                    // If no redirect, try to parse the response as URL
+                    try {
+                        const data = JSON.parse(result);
+                        if (data.paymentUrl) {
+                            window.location.replace(data.paymentUrl);
+                        } else {
+                            throw new Error('Không nhận được URL thanh toán');
+                        }
+                    } catch (parseError) {
+                        console.error('Lỗi parse response:', parseError);
+                        alert('Đã xảy ra lỗi khi xử lý thanh toán VNPay!');
+                    }
+                }
+            } catch (error) {
+                console.error('VNPay error:', error);
+                alert('Đã xảy ra lỗi khi xử lý thanh toán VNPay!');
+            }
         }
 
     @* Hàm xử lý thanh toán tiền mặt *@
