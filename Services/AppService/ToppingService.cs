@@ -27,8 +27,6 @@ public class ToppingService
         {
             id_dishes = id_dishes
         };
-        _logger.LogInformation("Dishes ID: {@DishesId}", id_dishes);
-        _logger.LogInformation("Request of GetToppings: {@Request}", request);
 
         var url = $"https://jollicowfe-production.up.railway.app/api/admin/toppings/filter";
         var response = await _httpClient.PostAsJsonAsync(url, request);
@@ -42,8 +40,31 @@ public class ToppingService
         {
             throw new Exception($"Lấy topping thất bại: {response.StatusCode}");
         }
+
         var content = await response.Content.ReadAsStringAsync();
         var data = JsonConvert.DeserializeObject<List<ToppingModels>>(content);
+
+        // Tự động set mustChoice = true cho các topping về kích thước/kích cỡ
+        if (data != null)
+        {
+            foreach (var topping in data)
+            {
+                var nameLower = topping.name_details.ToLower();
+
+                // Set mustChoice = true cho các topping về kích thước/kích cỡ
+                // Override bất kể API trả về mustChoose = true hay false
+                if (nameLower.Contains("kích thước") ||
+                    nameLower.Contains("kích cỡ") ||
+                    nameLower.Contains("size") ||
+                    nameLower.Contains("độ lớn") ||
+                    nameLower.Contains("dụng cụ") ||
+                    nameLower.Contains("utensil"))
+                {
+                    topping.mustChoice = true;
+                }
+            }
+        }
+
         return data ?? new List<ToppingModels>();
     }
 }

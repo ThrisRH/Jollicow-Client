@@ -27,6 +27,20 @@ async function apiFetch(
 
 async function updateCartTotalUI() {
   try {
+    // Ưu tiên đọc từ localStorage trước
+    const savedTotal = localStorage.getItem("cart_total");
+    if (savedTotal) {
+      const total = parseFloat(savedTotal);
+      console.log("Using saved cart total from localStorage:", total);
+
+      const cartTotalElement = document.getElementById("cartTotalPrice");
+      if (cartTotalElement) {
+        cartTotalElement.textContent = total.toLocaleString("vi-VN") + "đ";
+      }
+      return; // Không cần gọi API nếu đã có dữ liệu
+    }
+
+    // Nếu không có localStorage, gọi API
     const payload = {
       id_table: document.body.dataset.table,
       id_restaurant: document.body.dataset.restaurant,
@@ -44,7 +58,8 @@ async function updateCartTotalUI() {
     // const cartItems = JSON.parse(localStorage.getItem(cartKey) || "[]");
 
     const total = cartItems.reduce(
-      (sum, item) => sum + (parseFloat(item.price) || 0),
+      (sum, item) =>
+        sum + parseFloat(item.price) * (parseInt(item.quantity) || 1),
       0
     );
 
@@ -74,4 +89,19 @@ window.addEventListener("storage", function (e) {
   if (e.key === getCartKey()) {
     updateCartTotalUI();
   }
+});
+
+// Lắng nghe event cartTotalUpdated từ cart page
+window.addEventListener("cartTotalUpdated", function (e) {
+  const total = e.detail.total;
+  console.log("Cart total updated event received:", total);
+
+  // Cập nhật navbar
+  const cartTotalElement = document.getElementById("cartTotalPrice");
+  if (cartTotalElement) {
+    cartTotalElement.textContent = total.toLocaleString("vi-VN") + "đ";
+  }
+
+  // Lưu vào localStorage
+  localStorage.setItem("cart_total", total.toString());
 });

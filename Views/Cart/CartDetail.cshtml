@@ -46,6 +46,23 @@
         const id_table = '@idTable';
         const restaurant_id = '@restaurantId';
 
+        // Function để tính giá đúng cho từng món
+        function calculateItemPrice(price, quantity) {
+            const itemPrice = parseFloat(price) || 0;
+            const itemQuantity = parseInt(quantity) || 1;
+
+            // Kiểm tra xem price có vẻ đã bao gồm quantity hay không
+            const unitPrice = itemPrice / itemQuantity;
+
+            if (unitPrice < 5000) {
+                // Có thể price đã bao gồm quantity
+                return itemPrice;
+            } else {
+                // Price có vẻ là giá gốc
+                return itemPrice * itemQuantity;
+            }
+        }
+
         async function apiFetch(url, method = 'GET', data = null, headers = { 'Content-Type': 'application/json' }) {
             const options = { method, headers };
             if (data) options.body = JSON.stringify(data);
@@ -62,10 +79,34 @@
             const response = await apiFetch('https://jollicowfe-production.up.railway.app/api/admin/carts/filter', 'POST', payload);
             const cartItems = response.carts || [];
 
+            console.log('Cart API Response:', response);
+            console.log('Cart Items:', cartItems);
+
+            // Test case: Giả sử có 1 item với price=40000, quantity=2
+            // Nếu price đã bao gồm quantity thì total = 40000
+            // Nếu price là giá gốc thì total = 40000 * 2 = 80000
+            const testItem = cartItems[0];
+            if (testItem) {
+                console.log('Test case analysis:');
+                console.log(`- Item price: ${testItem.price}`);
+                console.log(`- Item quantity: ${testItem.quantity}`);
+                console.log(`- Current calculation: ${testItem.price} * ${testItem.quantity} = ${testItem.price * testItem.quantity}`);
+                console.log(`- If price includes quantity: total should be ${testItem.price}`);
+                console.log(`- If price is unit price: total should be ${testItem.price * testItem.quantity}`);
+
+                // Kiểm tra xem price có vẻ đã bao gồm quantity hay không
+                const unitPrice = testItem.price / testItem.quantity;
+                console.log(`- Calculated unit price: ${unitPrice}`);
+                console.log(`- If unit price looks reasonable (e.g., 20000 for a dish), then price is unit price`);
+                console.log(`- If unit price looks too low (e.g., 20000 for 2 dishes = 10000 each), then price includes quantity`);
+            }
+
             if (cartItems.length === 0) {
                 cartItemsContainer.innerHTML = '<div class="text-center py-4">Giỏ hàng đang trống</div>';
                 if (checkoutBtn) checkoutBtn.disabled = true;
                 document.getElementById('cartTotal').textContent = '0đ';
+                // Xóa localStorage khi cart trống
+                localStorage.removeItem('cart_total');
                 return;
             }
 
@@ -74,37 +115,43 @@
             cartItemsContainer.innerHTML = cartItems.map((item, index) => {
                 const displayQuantity = cartUpdate[item.id] ?? item.quantity;
                 return `
-                                                            <div class="cart-item" data-id="${item.id}" data-price="${item.price}">
-                                                                <button class="btn btn-sm d-flex justify-content-center align-items-center btn-outline-danger remove-btn p-0 m-0 border-1"
-                                                                        style="width: 24px; height: 24px; align-self: flex-end; border-radius: 6px" onclick="deleteItem('${item.id}')">
-                                                                        <i class="bi bi-trash"></i>
-                                                                </button>
-                                                                <div class="cart-items-detail d-flex flex-row" style="gap: 12px">
-                                                                    <div class="cart-item-image">
-                                                                        <img src="${item.image}" alt="${item.name}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">
-                                                                    </div>
-                                                                    <div class="cart-item-container">
-                                                                        <div class="cart-item-details">
-                                                                            <div class="cart-item-name">${item.name}</div>
-                                                                            <div class="cart-item-options">
-                                                                                ${item.toppings && item.toppings.length > 0 ? `Topping: ${item.toppings.join(', ')}` : ''}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="d-flex flex-row justify-content-between align-items-center">
-                                                                            <div class="cart-item-quantity">
-                                                                                <button class="quantity-btn" onclick="changeQuantity('${item.id}', -1)">-</button>
-                                                                                <input id="quantity-input-${item.id}" type="number" class="quantity-input" value="${displayQuantity}" style="color: #5F6368; font-size:12px" min="1" max="99" onchange="updateQuantityInput('${item.id}')">
-                                                                                <button class="quantity-btn" onclick="changeQuantity('${item.id}', 1)">+</button>
-                                                                            </div>
-                                                                            <div class="cart-item-price">${(item.price * displayQuantity).toLocaleString('vi-VN')}đ</div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        `;
+                                                                                                                                    <div class="cart-item" data-id="${item.id}" data-price="${item.price}">
+                                                                                                                                        <button class="btn btn-sm d-flex justify-content-center align-items-center btn-outline-danger remove-btn p-0 m-0 border-1"
+                                                                                                                                                style="width: 24px; height: 24px; align-self: flex-end; border-radius: 6px" onclick="deleteItem('${item.id}')">
+                                                                                                                                            <i class="bi bi-trash"></i>
+                                                                                                                                        </button>
+                                                                                                                                        <div class="cart-items-detail d-flex flex-row" style="gap: 12px">
+                                                                                                                                            <div class="cart-item-image">
+                                                                                                                                                <img src="${item.image}" alt="${item.name}" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover;">
+                                                                                                                                            </div>
+                                                                                                                                            <div class="cart-item-container">
+                                                                                                                                                <div class="cart-item-details">
+                                                                                                                                                    <div class="cart-item-name">${item.name}</div>
+                                                                                                                                                    <div class="cart-item-options">
+                                                                                                                                                        ${item.toppings && item.toppings.length > 0 ? `Topping: ${item.toppings.join(', ')}` : ''}
+                                                                                                                                                    </div>
+                                                                                                                                                </div>
+                                                                                                                                                <div class="d-flex flex-row justify-content-between align-items-center">
+                                                                                                                                                    <div class="cart-item-quantity">
+                                                                                                                                                        <button class="quantity-btn" onclick="changeQuantity('${item.id}', -1)">-</button>
+                                                                                                                                                        <input id="quantity-input-${item.id}" type="number" class="quantity-input" value="${displayQuantity}" style="color: #5F6368; font-size:12px" min="1" max="99" onchange="updateQuantityInput('${item.id}')">
+                                                                                                                                                        <button class="quantity-btn" onclick="changeQuantity('${item.id}', 1)">+</button>
+                                                                                                                                                    </div>
+                                                                                                                                                    <div class="cart-item-price">${calculateItemPrice(item.price, displayQuantity).toLocaleString('vi-VN')}đ</div>
+                                                                                                                                                </div>
+                                                                                                                                            </div>
+                                                                                                                                        </div>
+                                                                                                                                    </div>
+                                                                                                                                `;
             }).join('');
 
-            updateCartTotal(cartItems);
+            // Chỉ tính toán tổng tiền nếu không có cart_update trong localStorage
+            // hoặc nếu có cart_update thì dùng updateCartTotalFromDOM
+            if (Object.keys(cartUpdate).length === 0) {
+                updateCartTotal(cartItems);
+            } else {
+                updateCartTotalFromDOM();
+            }
         }
 
         function changeQuantity(itemId, delta) {
@@ -117,6 +164,18 @@
             input.value = newQuantity;
 
             // Cập nhật lại tổng tiền tạm thời
+            updateCartTotalFromDOM();
+        }
+
+        function updateQuantityInput(itemId) {
+            const input = document.getElementById(`quantity-input-${itemId}`);
+            const newQuantity = Math.max(1, Math.min(99, Number(input.value) || 1));
+            const cartUpdate = JSON.parse(localStorage.getItem('cart_update') || '{}');
+            cartUpdate[itemId] = newQuantity;
+            localStorage.setItem('cart_update', JSON.stringify(cartUpdate));
+            input.value = newQuantity;
+
+            // Cập nhật lại tổng tiền
             updateCartTotalFromDOM();
         }
 
@@ -153,8 +212,44 @@
         }
 
         function updateCartTotal(cartItems) {
-            const total = cartItems.reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * item.quantity), 0);
+            console.log('Cart Items for total calculation:', cartItems);
+
+            // Logic để tính tổng tiền đúng theo số lượng
+            const total = cartItems.reduce((sum, item) => {
+                const itemPrice = parseFloat(item.price) || 0;
+                const itemQuantity = parseInt(item.quantity) || 1;
+
+                // Kiểm tra xem price có vẻ đã bao gồm quantity hay không
+                // Nếu price quá cao so với quantity, có thể đã bao gồm quantity
+                const unitPrice = itemPrice / itemQuantity;
+                console.log(`Item: ${item.name}, Price: ${itemPrice}, Quantity: ${itemQuantity}, Unit Price: ${unitPrice}`);
+
+                // Nếu unit price quá thấp (ví dụ: 10000 cho 1 món), có thể price đã bao gồm quantity
+                // Nếu unit price hợp lý (ví dụ: 20000 cho 1 món), thì price là giá gốc
+                let itemTotal;
+                if (unitPrice < 5000) {
+                    // Có thể price đã bao gồm quantity
+                    itemTotal = itemPrice;
+                    console.log(`  -> Price seems to include quantity, using: ${itemTotal}`);
+                } else {
+                    // Price có vẻ là giá gốc
+                    itemTotal = itemPrice * itemQuantity;
+                    console.log(`  -> Price seems to be unit price, calculating: ${itemPrice} * ${itemQuantity} = ${itemTotal}`);
+                }
+
+                return sum + itemTotal;
+            }, 0);
+
+            console.log('Final total:', total);
+
+            // Lưu tổng tiền vào localStorage
+            localStorage.setItem('cart_total', total.toString());
+
+            // Trigger event để navbar cập nhật
+            window.dispatchEvent(new CustomEvent('cartTotalUpdated', { detail: { total: total } }));
+
             const voucherData = JSON.parse(localStorage.getItem('voucher') || null);
+            console.log('Voucher data from localStorage (updateCartTotal):', voucherData);
 
             const cartTotalElement = document.getElementById('cartTotal');
             const originalPriceElement = document.getElementById('originalPrice');
@@ -164,10 +259,14 @@
 
             if (voucherData && voucherData.percent > 0) {
                 const { percent, maxDiscount } = voucherData;
+                console.log('Applying voucher (updateCartTotal):', { percent, maxDiscount, total });
+
                 let discounted = Math.round(total * (1 - percent / 100));
                 if (total - discounted >= maxDiscount) {
                     discounted = total - maxDiscount;
                 }
+
+                console.log('Voucher calculation (updateCartTotal):', { total, discounted, discount: total - discounted });
 
                 cartTotalElement.textContent = discounted.toLocaleString('vi-VN') + 'đ';
                 originalPriceElement.textContent = total.toLocaleString('vi-VN') + 'đ';
@@ -178,6 +277,7 @@
 
                 localStorage.setItem('cartTotalAfterDiscount', discounted);
             } else {
+                console.log('No voucher applied or invalid voucher data (updateCartTotal)');
                 cartTotalElement.textContent = total.toLocaleString('vi-VN') + 'đ';
                 originalPriceRowElement.style.display = 'none';
                 discountRowElement.style.display = 'none';
@@ -187,19 +287,90 @@
         function updateCartTotalFromDOM() {
             const cartUpdate = JSON.parse(localStorage.getItem('cart_update') || '{}');
             let total = 0;
+
+            console.log('Cart update from localStorage:', cartUpdate);
+
             document.querySelectorAll('.cart-item').forEach(itemDiv => {
                 const itemId = itemDiv.dataset.id;
                 const price = parseFloat(itemDiv.dataset.price) || 0;
                 const quantity = cartUpdate[itemId] ?? Number(itemDiv.querySelector('.quantity-input').value);
-                total += price * quantity;
+
+                // Kiểm tra xem price có vẻ đã bao gồm quantity hay không
+                const unitPrice = price / quantity;
+                let itemTotal;
+
+                if (unitPrice < 5000) {
+                    // Có thể price đã bao gồm quantity
+                    itemTotal = price;
+                    console.log(`DOM Item ID: ${itemId}, Price: ${price}, Quantity: ${quantity}, Unit Price: ${unitPrice} -> Using price as total: ${itemTotal}`);
+                } else {
+                    // Price có vẻ là giá gốc
+                    itemTotal = price * quantity;
+                    console.log(`DOM Item ID: ${itemId}, Price: ${price}, Quantity: ${quantity}, Unit Price: ${unitPrice} -> Calculating: ${price} * ${quantity} = ${itemTotal}`);
+                }
+
+                total += itemTotal;
                 // Cập nhật lại giá từng món trên UI nếu muốn:
                 const priceDiv = itemDiv.querySelector('.cart-item-price');
-                if (priceDiv) priceDiv.textContent = (price * quantity).toLocaleString('vi-VN') + 'đ';
+                if (priceDiv) priceDiv.textContent = itemTotal.toLocaleString('vi-VN') + 'đ';
             });
-            document.getElementById('cartTotal').textContent = total.toLocaleString('vi-VN') + 'đ';
+
+            console.log('DOM Total:', total);
+
+            // Lưu tổng tiền vào localStorage
+            localStorage.setItem('cart_total', total.toString());
+
+            // Trigger event để navbar cập nhật
+            window.dispatchEvent(new CustomEvent('cartTotalUpdated', { detail: { total: total } }));
+
+            // Xử lý voucher
+            const voucherData = JSON.parse(localStorage.getItem('voucher') || null);
+            console.log('Voucher data from localStorage:', voucherData);
+
+            const cartTotalElement = document.getElementById('cartTotal');
+            const originalPriceElement = document.getElementById('originalPrice');
+            const originalPriceRowElement = document.getElementById('originalPriceRow');
+            const discountAmountElement = document.getElementById('discountAmount');
+            const discountRowElement = document.getElementById('discountRow');
+
+            if (voucherData && voucherData.percent > 0) {
+                const { percent, maxDiscount } = voucherData;
+                console.log('Applying voucher:', { percent, maxDiscount, total });
+
+                let discounted = Math.round(total * (1 - percent / 100));
+                if (total - discounted >= maxDiscount) {
+                    discounted = total - maxDiscount;
+                }
+
+                console.log('Voucher calculation:', { total, discounted, discount: total - discounted });
+
+                cartTotalElement.textContent = discounted.toLocaleString('vi-VN') + 'đ';
+                originalPriceElement.textContent = total.toLocaleString('vi-VN') + 'đ';
+                discountAmountElement.textContent = (total - discounted).toLocaleString('vi-VN') + 'đ';
+
+                originalPriceRowElement.style.display = 'flex';
+                discountRowElement.style.display = 'flex';
+
+                localStorage.setItem('cartTotalAfterDiscount', discounted);
+            } else {
+                console.log('No voucher applied or invalid voucher data');
+                cartTotalElement.textContent = total.toLocaleString('vi-VN') + 'đ';
+                originalPriceRowElement.style.display = 'none';
+                discountRowElement.style.display = 'none';
+            }
         }
 
         document.addEventListener('DOMContentLoaded', loadCartItems);
+
+        // Đọc tổng tiền từ localStorage khi load trang
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTotal = localStorage.getItem('cart_total');
+            if (savedTotal) {
+                const total = parseFloat(savedTotal);
+                console.log('Loading saved cart total from localStorage:', total);
+                document.getElementById('cartTotal').textContent = total.toLocaleString('vi-VN') + 'đ';
+            }
+        });
 
         window.addEventListener('voucherApplied', loadCartItems);
 

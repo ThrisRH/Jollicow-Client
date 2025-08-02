@@ -14,15 +14,16 @@
 </head>
 
 @{
-    var idTable = ViewData["IdTable"] ?? "";
-    var restaurantId = ViewData["RestaurantId"] ?? "";
+    var idTable = ViewData["IdTable"] ?? Context.Request.Query["id_table"].ToString();
+    var restaurantId = ViewData["RestaurantId"] ?? Context.Request.Query["restaurant_id"].ToString();
+    var acsc = Context.Request.Query["acsc"].ToString();
 }
 
 <body data-table="@idTable" data-restaurant="@restaurantId">
     <header>
         <nav class="d-flex flex-row justify-content-between align-items-center" style="padding: 12px">
             <a class="logo" style="text-decoration: none; font-size: 24px; font-weight: bold;"
-                href="@Url.Action("Menu", "Menu", new { id_table = ViewData["IdTable"], restaurant_id = ViewData["RestaurantId"] })">JolliServe</a>
+                href="@Url.Action("Menu", "Menu", new { id_table = idTable, restaurant_id = restaurantId, acsc = acsc })">JolliServe</a>
             <a href="@Url.Action("CartDetail", "Cart", new { acsc = Context.Request.Query["acsc"] })"
                 class="cart-element d-flex flex-row" style="gap: 12px; text-decoration: none; cursor: pointer;">
                 <img src="~/lib/svg/Bill.svg" alt="Giỏ hàng" class="cart-icon" />

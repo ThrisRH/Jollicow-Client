@@ -36,6 +36,11 @@ public class CartAPIHelper
 
                 if (result?.Carts != null)
                 {
+                    Console.WriteLine($"Cart items count: {result.Carts.Count}");
+                    foreach (var item in result.Carts)
+                    {
+                        Console.WriteLine($"Item: Price={item.Price}, Quantity={item.Quantity}, Total={item.Price * item.Quantity}");
+                    }
                     return result.Carts.Sum(item => (decimal)(item.Price * item.Quantity));
                 }
             }

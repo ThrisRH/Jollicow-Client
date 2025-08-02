@@ -80,7 +80,6 @@ namespace Jollicow.Controllers
                 await _orderService.CreateOrder(idTable, restaurantId);
                 _logger.LogInformation($"Đơn hàng đã được tạo thành công cho Bàn {idTable} tại Nhà hàng {restaurantId}.");
 
-
             }
             catch (Exception ex)
             {

@@ -79,23 +79,43 @@
                     </div>
                 }
 
-
-
                 @if (toppingGroups != null && toppingGroups.Any())
                 {
                     foreach (var group in toppingGroups)
                     {
                         <h5 class="dish-name fw-bold" style="font-size: 16px;">@group.name_details</h5>
 
-                        foreach (var topping in group.options)
+                        @if (group.mustChoice)
                         {
-                            <div class="topping-item">
-                                <div class="checkbox-wrapper">
-                                    <input type="checkbox" id="@topping.id_option" name="topping" data-price="@topping.price">
-                                    <label for="@topping.id_option" class="topping-name">@topping.name</label>
-                                </div>
-                                <span class="topping-price">+@(int.Parse(topping.price).ToString("N0")) đ</span>
+                            // Radio buttons cho mustChoice = true (single choice)
+                            <div class="topping-group-single" data-group-id="@group.id_topping">
+                                @foreach (var topping in group.options)
+                                {
+                                    var uniqueId = $"{group.id_topping}_{topping.id_option}";
+                                    <div class="topping-item">
+                                        <div class="radio-wrapper">
+                                            <input type="radio" id="@uniqueId" name="topping_@group.id_topping" data-price="@topping.price" data-group-id="@group.id_topping" data-option-id="@topping.id_option" @(group.options.IndexOf(topping) == 0 ? "checked" : "")>
+                                            <label for="@uniqueId" class="topping-name">@topping.name</label>
+                                        </div>
+                                        <span class="topping-price">+@(int.Parse(topping.price).ToString("N0")) đ</span>
+                                    </div>
+                                }
                             </div>
+                        }
+                        else
+                        {
+                            // Checkboxes cho mustChoice = false (multiple choice)
+                            @foreach (var topping in group.options)
+                            {
+                                var uniqueId = $"{group.id_topping}_{topping.id_option}";
+                                <div class="topping-item">
+                                    <div class="checkbox-wrapper">
+                                        <input type="checkbox" id="@uniqueId" name="topping" data-price="@topping.price" data-option-id="@topping.id_option">
+                                        <label for="@uniqueId" class="topping-name">@topping.name</label>
+                                    </div>
+                                    <span class="topping-price">+@(int.Parse(topping.price).ToString("N0")) đ</span>
+                                </div>
+                            }
                         }
                         <div class="mb-2"></div>
                     }
@@ -219,7 +239,7 @@
             });
         }
 
-        // Toppings selection
+        // Toppings selection - Checkboxes (multiple choice)
         document.querySelectorAll('input[name="topping"]').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
                 const price = parseInt(e.target.dataset.price);
@@ -232,6 +252,41 @@
             });
         });
 
+        // Toppings selection - Radio buttons (single choice for mustChoice = true)
+        document.querySelectorAll('input[type="radio"][name^="topping_"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const price = parseInt(e.target.dataset.price);
+                const groupId = e.target.dataset.groupId;
+                
+                // Remove all prices from this group first
+                document.querySelectorAll(`input[name="${e.target.name}"]`).forEach(r => {
+                    const rPrice = parseInt(r.dataset.price);
+                    if (rPrice) {
+                        selectedToppings.delete(rPrice);
+                    }
+                });
+                
+                // Add the selected price
+                if (e.target.checked) {
+                    selectedToppings.add(price);
+                }
+                
+                updateTotalPrice();
+            });
+        });
+
+        // Initialize default selections for mustChoice groups
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-select first option for mustChoice groups
+            document.querySelectorAll('input[type="radio"][name^="topping_"]:checked').forEach(radio => {
+                const price = parseInt(radio.dataset.price);
+                if (price) {
+                    selectedToppings.add(price);
+                }
+            });
+            updateTotalPrice();
+        });
+
         function addToCart() {
             // Gather data
             const dishId = '@Model.id_dishes';
@@ -242,10 +297,27 @@
             const note = document.querySelector('.note-input').value;
             const sizeOption = document.querySelector('#sizeGroup .option-item.selected');
             const spicyOption = document.querySelector('#spicyGroup .option-item.selected');
+
+            // Get selected toppings from checkboxes
             const selectedToppingLabels = Array.from(document.querySelectorAll('input[name="topping"]:checked')).map(cb => cb.nextElementSibling.textContent.trim());
             const selectedToppingPrices = Array.from(document.querySelectorAll('input[name="topping"]:checked')).map(cb => parseInt(cb.dataset.price));
-            const toppingsTotal = selectedToppingPrices.reduce((sum, price) => sum + price, 0);
+            
+            // Get selected toppings from radio buttons (mustChoice groups)
+            const selectedRadioLabels = Array.from(document.querySelectorAll('input[type="radio"][name^="topping_"]:checked')).map(r => r.nextElementSibling.textContent.trim());
+            const selectedRadioPrices = Array.from(document.querySelectorAll('input[type="radio"][name^="topping_"]:checked')).map(r => parseInt(r.dataset.price));
+            
+            // Get option IDs for better tracking
+            const selectedToppingOptionIds = Array.from(document.querySelectorAll('input[name="topping"]:checked')).map(cb => cb.dataset.optionId);
+            const selectedRadioOptionIds = Array.from(document.querySelectorAll('input[type="radio"][name^="topping_"]:checked')).map(r => r.dataset.optionId);
+            
+            // Combine all selected toppings
+            const allSelectedLabels = [...selectedToppingLabels, ...selectedRadioLabels];
+            const allSelectedPrices = [...selectedToppingPrices, ...selectedRadioPrices];
+            const allSelectedOptionIds = [...selectedToppingOptionIds, ...selectedRadioOptionIds];
+
+            const toppingsTotal = allSelectedPrices.reduce((sum, price) => sum + price, 0);
             const totalPrice = (basePrice + selectedSizePrice + toppingsTotal) * quantity;
+            const unitPrice = basePrice + selectedSizePrice + toppingsTotal; // Giá của 1 món
 
             // Prepare payload
             const payload = {
@@ -253,9 +325,9 @@
                 id_restaurant: restaurantId,
                 id_table: idTable,
                 name: @Html.Raw(Json.Serialize(Model.name)),
-                price: totalPrice,
+                price: unitPrice, // Gửi giá của 1 món, không nhân quantity
                 quantity: quantity,
-                id_topping: selectedToppingLabels,
+                id_topping: allSelectedLabels,
                 note: note,
                 image: dishImage
             };

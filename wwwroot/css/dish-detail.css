@@ -144,6 +144,32 @@
     accent-color: #E31837;
 }
 
+/* Radio wrapper styling for mustChoice groups */
+.radio-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.radio-wrapper input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #E31837;
+}
+
+/* Topping group single styling */
+.topping-group-single {
+    margin-bottom: 16px;
+}
+
+.topping-group-single .topping-item {
+    border-bottom: 1px solid #E9E9E9;
+}
+
+.topping-group-single .topping-item:last-child {
+    border-bottom: none;
+}
+
 .note-section {
     margin-top: 20px;
     padding-top: 20px;
