@@ -2,64 +2,61 @@
 @model PaymentMethodModel
 
 <!-- Payment Method Dropdown -->
-<div class="mb-3">
-    <label for="paymentMethod" class="form-label fw-bold mb-2">Phương thức thanh toán:</label>
-    <select class="form-select" id="paymentMethod" onchange="updatePaymentButton()">
-        <option value="">Chọn phương thức thanh toán</option>
-        <option value="vietqr">Chuyển khoản VietQR</option>
-        <option value="vnpay">Chuyển khoản VNPay</option>
-        <option value="cash">Tiền mặt</option>
-    </select>
+<div class="mb-4">
+    <label class="form-label fw-bold mb-3">
+        <i class="bi bi-credit-card me-2"></i>Phương thức thanh toán
+    </label>
+    <div class="payment-method-container">
+        <div class="custom-select" id="customSelect">
+            <div class="select-selected" id="selectSelected">
+                Chọn phương thức thanh toán
+                <i class="bi bi-chevron-down"></i>
+            </div>
+            <div class="select-items select-hide" id="selectItems">
+                <div class="select-option" data-value="vietqr">
+                    <i class="bi bi-qr-code me-2"></i>Chuyển khoản VietQR
+                </div>
+                <div class="select-option" data-value="vnpay">
+                    <i class="bi bi-bank me-2"></i>Chuyển khoản VNPay
+                </div>
+                <div class="select-option" data-value="cash">
+                    <i class="bi bi-cash-coin me-2"></i>Tiền mặt
+                </div>
+            </div>
+        </div>
+        <input type="hidden" id="paymentMethod" value="">
+    </div>
 </div>
 
 <!-- Payment Button -->
-<button class="button w-100" style="height: 48px;" type="button" id="paymentButton" onclick="processPayment()" disabled>
+<button class="payment-button w-100" type="button" id="paymentButton" onclick="processPayment()" disabled>
     <span class="button-text">Chọn phương thức thanh toán</span>
 </button>
-
-<style>
-    .form-select {
-        border: 1px solid #E9E9E9;
-        border-radius: 16px;
-        height: 40px;
-        padding: 8px 12px;
-        font-size: 14px;
-    }
-
-    .form-select:focus {
-        border-color: #E31837;
-        box-shadow: 0 0 0 0.2rem rgba(227, 24, 55, 0.25);
-    }
-
-    .form-label {
-        color: #3F4143;
-        font-size: 14px;
-    }
-</style>
 
 <script>
     @* Hàm cập nhật nút thanh toán dựa trên phương thức được chọn *@
         function updatePaymentButton() {
             const paymentMethod = document.getElementById('paymentMethod').value;
             const paymentButton = document.getElementById('paymentButton');
+            const cartTotal = parseFloat(localStorage.getItem('cart_total') || '0');
+
+            // Kiểm tra giỏ hàng rỗng
+            if (cartTotal <= 0) {
+                paymentButton.disabled = true;
+                paymentButton.textContent = 'Giỏ hàng trống';
+                paymentButton.className = 'payment-button w-100';
+                return;
+            }
 
             if (!paymentMethod) {
                 paymentButton.disabled = true;
                 paymentButton.textContent = 'Chọn phương thức thanh toán';
-                paymentButton.className = 'btn w-100';
-                paymentButton.style.backgroundColor = '#cccccc';
-                paymentButton.style.borderRadius = '16px';
-                paymentButton.style.color = '#666666';
-                paymentButton.style.fontWeight = 'normal';
+                paymentButton.className = 'payment-button w-100';
                 return;
             }
 
             paymentButton.disabled = false;
-            paymentButton.className = 'btn w-100';
-            paymentButton.style.backgroundColor = '#E31837';
-            paymentButton.style.borderRadius = '16px';
-            paymentButton.style.color = 'white';
-            paymentButton.style.fontWeight = 'bold';
+            paymentButton.className = 'payment-button w-100';
 
             switch (paymentMethod) {
                 case 'vietqr':
@@ -84,7 +81,6 @@
         function processPayment() {
             const paymentMethod = document.getElementById('paymentMethod').value;
             sessionStorage.setItem('checkoutInProgress', 'true');
-
 
             if (!paymentMethod) {
                 alert('Vui lòng chọn phương thức thanh toán!');
@@ -179,9 +175,12 @@
 
     @* Hàm xử lý thanh toán tiền mặt *@
         function processCashPayment() {
-            if (confirm('Bạn có chắc chắn muốn thanh toán bằng tiền mặt?')) {
-                // TODO: Implement cash payment logic
-                alert('Đơn hàng đã được xác nhận. Vui lòng thanh toán tiền mặt khi nhận hàng!');
+            const urlParams = new URLSearchParams(window.location.search);
+            const acsc = urlParams.get('acsc');
+            if (acsc) {
+                window.location.href = `/Payment/Cash?acsc=${encodeURIComponent(acsc)}`;
+            } else {
+                alert('Không tìm thấy mã truy cập hợp lệ.');
             }
         }
 
@@ -192,8 +191,63 @@
         }
 
 
-    // Initialize payment button on component load
+    // Initialize custom dropdown
     document.addEventListener('DOMContentLoaded', function () {
         updatePaymentButton();
+        initCustomDropdown();
+
+        // Listen for cart total changes
+        window.addEventListener('storage', function (e) {
+            if (e.key === 'cart_total') {
+                updatePaymentButton();
+            }
+        });
     });
+
+    function initCustomDropdown() {
+        const customSelect = document.getElementById('customSelect');
+        const selectSelected = document.getElementById('selectSelected');
+        const selectItems = document.getElementById('selectItems');
+        const selectOptions = document.querySelectorAll('.select-option');
+        const hiddenInput = document.getElementById('paymentMethod');
+
+        // Toggle dropdown
+        selectSelected.addEventListener('click', function (e) {
+            e.stopPropagation();
+            selectItems.classList.toggle('select-hide');
+            selectSelected.classList.toggle('active');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function () {
+            selectItems.classList.add('select-hide');
+            selectSelected.classList.remove('active');
+        });
+
+        // Handle option selection
+        selectOptions.forEach(option => {
+            option.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const value = this.getAttribute('data-value');
+                const text = this.textContent.trim();
+
+                // Update hidden input
+                hiddenInput.value = value;
+
+                // Update selected text
+                selectSelected.innerHTML = `${text}<i class="bi bi-chevron-down"></i>`;
+
+                // Update option styling
+                selectOptions.forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+
+                // Close dropdown
+                selectItems.classList.add('select-hide');
+                selectSelected.classList.remove('active');
+
+                // Update button
+                updatePaymentButton();
+            });
+        });
+    }
 </script>

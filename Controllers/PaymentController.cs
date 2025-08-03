@@ -56,6 +56,33 @@ namespace Jollicow.Controllers
             return View();
         }
 
+        [HttpGet]
+        public async Task<IActionResult> Cash(string acsc)
+        {
+            // Lấy thông tin từ mã hóa
+            var decrypted = _tokenService.TryDecrypt(acsc);
+            if (decrypted == null)
+            {
+                ViewBag.Error = "Link không hợp lệ hoặc đã hết hạn.";
+                return View("Error");
+            }
+
+            var (idTable, restaurantId) = decrypted.Value;
+
+            if (string.IsNullOrEmpty(idTable) || string.IsNullOrEmpty(restaurantId))
+            {
+                return BadRequest("Thiếu thông tin.");
+            }
+
+            // Lấy tổng tiền từ giỏ hàng
+            var cartTotal = await CartAPIHelper.GetCartTotalAsync(idTable, restaurantId);
+
+            ViewData["IdTable"] = idTable;
+            ViewData["RestaurantId"] = restaurantId;
+            ViewData["Amount"] = cartTotal;
+            return View();
+        }
+
         //  Tạo order áp dụng cho VietQR
         [HttpPost]
         public async Task<IActionResult> Create(string acsc, string? voucherId = null, string? paymentMethod = null)
@@ -101,6 +128,10 @@ namespace Jollicow.Controllers
                         _logger.LogError($"Lỗi khi tạo đơn hàng VNPay: {ex.Message}");
                         return Json(new { success = false, error = $"Lỗi khi tạo đơn hàng: {ex.Message}" });
                     }
+                }
+                else if (paymentMethod == "cash")
+                {
+                    await _orderService.CreateOrder(idTable, restaurantId, voucherId, "cash");
                 }
                 else
                 {

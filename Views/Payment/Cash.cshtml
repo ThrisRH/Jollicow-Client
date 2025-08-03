@@ -1,0 +1,59 @@
+@{
+    ViewData["Title"] = "Thanh toán tiền mặt";
+    var idTable = ViewData["IdTable"]?.ToString() ?? "";
+    var restaurantId = ViewData["RestaurantId"]?.ToString() ?? "";
+    var amount = ViewData["Amount"]?.ToString() ?? "0";
+}
+
+@if (string.IsNullOrEmpty(idTable) || string.IsNullOrEmpty(restaurantId))
+{
+        <div class="alert alert-danger mt-5">Không hợp lệ!</div>
+}
+else
+{
+        <div class="container mt-5" style="max-width: 500px;">
+            <div class="card shadow">
+                <div class="card-body text-center">
+                    <h3 class="mb-3 fw-bold">Thanh toán tiền mặt</h3>
+                
+                    <div class="mb-4">
+                        <div class="alert alert-info">
+                            <h5 class="mb-2">Thông tin thanh toán</h5>
+                            <p class="mb-1"><strong>Bàn số:</strong> @idTable</p>
+                            <p class="mb-1"><strong>Tổng tiền:</strong> <span class="text-danger fw-bold">@amount VNĐ</span></p>
+                            <p class="mb-0"><strong>Phương thức:</strong> Tiền mặt</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="alert alert-warning">
+                            <h6 class="mb-2">Hướng dẫn thanh toán:</h6>
+                            <ul class="text-start mb-0">
+                                <li>Vui lòng chuẩn bị đúng số tiền: <strong>@amount VNĐ</strong></li>
+                                <li>Thanh toán trực tiếp với nhân viên phục vụ</li>
+                                <li>Nhận hóa đơn và kiểm tra lại thông tin</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="action-field d-flex flex-column gap-3 mt-3">
+                        <form asp-controller="Payment" asp-action="Create" method="post" onsubmit="attachOrderData()">
+                            <input type="hidden" name="acsc" value="@Context.Request.Query["acsc"]" />
+                            <input type="hidden" name="voucherId" id="voucherIdInput" />
+                            <input type="hidden" name="paymentMethod" value="cash" />
+                            <button type="submit" class="btn btn-success w-100">Xác nhận thanh toán</button>
+                        </form>
+                        <a href="@Url.Action("CartDetail", "Cart", new { acsc = Context.Request.Query["acsc"] })"
+                            class="btn btn-secondary" onclick="sessionStorage.removeItem('checkoutInProgress')">Quay lại giỏ hàng</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+}
+
+<script>
+    function attachOrderData() {
+        const voucherId = localStorage.getItem("voucher_id");
+        document.getElementById("voucherIdInput").value = voucherId || "";
+    }
+</script> 

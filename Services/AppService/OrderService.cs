@@ -37,7 +37,7 @@ public class OrderService
         {
             id_table = id_table,
             id_restaurant = id_restaurant,
-            pyamentMethod = "Thanh toán trực tiếp",
+            pyamentMethod = paymentMethod == "cash" ? "Tiền mặt" : "Thanh toán trực tiếp",
             id_promotion = voucherId
         };
 
