@@ -64,9 +64,12 @@ else
                     </div>
 
                     <!-- Navigation -->
-                    <div class="mt-4">
+                    <div class="mt-4 d-flex justify-content-center flex-column gap-2">
+                        <button id="closeTableBtn" class="btn btn-danger bill-nav-button m-0" onclick="closeTable()">
+                            Kết thúc bàn
+                        </button>
                         <a href="@Url.Action("Menu", "Menu", new { acsc = acsc })"
-                            class="btn btn-primary bill-nav-button">Quay lại menu</a>
+                            class="btn btn-primary bill-nav-button w-100">Quay lại menu</a>
                     </div>
                 </div>
             </div>
@@ -125,15 +128,30 @@ else
                         // Sắp xếp theo thời gian tạo và lấy mới nhất
                         orders.sort((a, b) => new Date(b.date_create) - new Date(a.date_create));
                         targetBill = orders[0];
+                        console.log('Found orders, latest order:', targetBill);
                     } else {
                         // Không có order nào, tiếp tục polling
+                        console.log('No orders found, continue polling...');
                         showPendingState();
                         return;
                     }
                 }
 
-                // Hiển thị bill ngay lập tức vì đã có order
+                // Kiểm tra trạng thái của bill mới nhất
+                const billStatus = targetBill.status_order || 'pending';
                 console.log('Target Bill:', targetBill);
+                console.log('Bill Status:', billStatus);
+
+                // Nếu trạng thái là pending hoặc "Chưa thanh toán", tiếp tục polling
+                if (billStatus === 'pending' || billStatus === 'Chưa thanh toán' || billStatus === 'chưa thanh toán') {
+                    console.log('Bill is still pending, continue polling...');
+                    showPendingState();
+                    return; // Tiếp tục polling
+                }
+
+                // Nếu trạng thái đã thay đổi, hiển thị bill
+                console.log('Bill status changed, showing bill...');
+                console.log('Final bill to display:', targetBill);
                 showBillState(targetBill);
                 clearInterval(pollingInterval);
             } else {
@@ -175,6 +193,9 @@ else
         const formattedHtml = formatBillData(billData);
         console.log('Formatted HTML:', formattedHtml);
         billDetails.innerHTML = formattedHtml;
+
+        // Hiển thị nút kết thúc bàn
+        document.getElementById('closeTableBtn').style.display = 'inline-block';
     }
 
     function showErrorState(message) {
@@ -266,6 +287,53 @@ else
                 </div>
             </div>
         `;
+    }
+
+    // Function kết thúc bàn
+    async function closeTable() {
+        try {
+            // Disable button để tránh click nhiều lần
+            const closeBtn = document.getElementById('closeTableBtn');
+            closeBtn.disabled = true;
+            closeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+            const response = await fetch('https://jollicowbe-admin.up.railway.app/api/admin/orders/closeTable', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id_restaurant: '@restaurantId',
+                    id_table: '@idTable'
+                })
+            });
+
+            const result = await response.json();
+            console.log('Close table response:', result);
+
+            if (response.ok) {
+                // Hiển thị thông báo thành công
+                alert('Đã kết thúc bàn thành công!');
+
+                // Chuyển về trang menu
+                window.location.href = '@Url.Action("Menu", "Menu", new { acsc = acsc })';
+            } else {
+                // Hiển thị lỗi
+                alert('Có lỗi xảy ra khi kết thúc bàn: ' + (result.message || 'Lỗi không xác định'));
+
+                // Reset button
+                closeBtn.disabled = false;
+                closeBtn.innerHTML = 'Kết thúc bàn';
+            }
+        } catch (error) {
+            console.error('Lỗi khi kết thúc bàn:', error);
+            alert('Có lỗi xảy ra khi kết thúc bàn. Vui lòng thử lại.');
+
+            // Reset button
+            const closeBtn = document.getElementById('closeTableBtn');
+            closeBtn.disabled = false;
+            closeBtn.innerHTML = 'Kết thúc bàn';
+        }
     }
 
     // Cleanup khi rời trang

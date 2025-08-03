@@ -25,12 +25,18 @@
         <nav class="d-flex flex-row justify-content-between align-items-center" style="padding: 12px">
             <a class="logo" style="text-decoration: none; font-size: 24px; font-weight: bold;"
                 href="@Url.Action("Menu", "Menu", new { id_table = idTable, restaurant_id = restaurantId, acsc = acsc })">JolliServe</a>
+
             <a href="@Url.Action("CartDetail", "Cart", new { acsc = Context.Request.Query["acsc"] })"
                 class="cart-element d-flex flex-row" style="gap: 12px; text-decoration: none; cursor: pointer;">
                 <img src="~/lib/svg/Bill.svg" alt="Giỏ hàng" class="cart-icon" />
                 <p id="cartTotalPrice">0đ</p>
             </a>
         </nav>
+
+        <!-- Số bàn ở dưới navbar -->
+        <div class="table-number-container" style="padding: 8px 12px; background: rgba(227, 24, 55, 0.05);">
+            <span class="table-number">Bàn @idTable</span>
+        </div>
     </header>
     <div class="container">
         <main>
@@ -43,6 +49,21 @@
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/cart.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- Custom Popup -->
+    <div id="customPopup" class="popup-overlay">
+        <div class="popup-container">
+            <div class="popup-icon">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div class="popup-title" id="popupTitle">Xác nhận</div>
+            <div class="popup-message" id="popupMessage">Bạn có chắc chắn muốn thực hiện hành động này?</div>
+            <div class="popup-buttons">
+                <button class="popup-btn popup-btn-cancel" onclick="closePopup()">Hủy</button>
+                <button class="popup-btn popup-btn-confirm" id="popupConfirmBtn">Xác nhận</button>
+            </div>
+        </div>
+    </div>
 </body>
 
 </html>
