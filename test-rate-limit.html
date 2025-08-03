@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Limit Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .button {
+            background: #E31837;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #c41230;
+        }
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Rate Limiting Test Tool</h1>
+    
+    <div class="test-section">
+        <h3>1. Test Single Request</h3>
+        <button class="button" onclick="testSingleRequest()">Test Single Request</button>
+        <p>Gửi 1 request để kiểm tra hoạt động bình thường</p>
+    </div>
+
+    <div class="test-section">
+        <h3>2. Test Rate Limiting (10 requests/second)</h3>
+        <button class="button" onclick="testRateLimit()">Test Rate Limit</button>
+        <p>Gửi 15 requests liên tiếp để trigger rate limit</p>
+    </div>
+
+    <div class="test-section">
+        <h3>3. Test Burst Requests</h3>
+        <button class="button" onclick="testBurstRequests()">Test Burst</button>
+        <p>Gửi nhiều requests cùng lúc để test burst protection</p>
+    </div>
+
+    <div class="test-section">
+        <h3>4. Test Different Endpoints</h3>
+        <button class="button" onclick="testMenuEndpoint()">Test Menu</button>
+        <button class="button" onclick="testCartEndpoint()">Test Cart</button>
+        <button class="button" onclick="testPaymentEndpoint()">Test Payment</button>
+        <p>Test rate limiting trên các endpoint khác nhau</p>
+    </div>
+
+    <div class="test-section">
+        <h3>5. Clear Logs</h3>
+        <button class="button" onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Test Results</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let requestCount = 0;
+        let successCount = 0;
+        let errorCount = 0;
+        let rateLimitCount = 0;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('log').innerHTML = '';
+            requestCount = 0;
+            successCount = 0;
+            errorCount = 0;
+            rateLimitCount = 0;
+        }
+
+        async function makeRequest(url, description) {
+            requestCount++;
+            try {
+                const startTime = Date.now();
+                const response = await fetch(url);
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (response.status === 429) {
+                    rateLimitCount++;
+                    const errorData = await response.json();
+                    log(`❌ RATE LIMITED: ${description} (${response.status}) - ${errorData.message}`, 'error');
+                    return false;
+                } else if (response.ok) {
+                    successCount++;
+                    log(`✅ SUCCESS: ${description} (${response.status}) - ${duration}ms`, 'success');
+                    return true;
+                } else {
+                    errorCount++;
+                    log(`❌ ERROR: ${description} (${response.status})`, 'error');
+                    return false;
+                }
+            } catch (error) {
+                errorCount++;
+                log(`❌ EXCEPTION: ${description} - ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testSingleRequest() {
+            log('🧪 Testing single request...', 'info');
+            await makeRequest('/Menu/Menu?id_table=B02&restaurant_id=CHA1001', 'Single Menu Request');
+            log(`📊 Summary: ${successCount} success, ${errorCount} errors, ${rateLimitCount} rate limited`, 'info');
+        }
+
+        async function testRateLimit() {
+            log('🧪 Testing rate limiting (15 requests)...', 'info');
+            
+            for (let i = 1; i <= 15; i++) {
+                await makeRequest('/Menu/Menu?id_table=B02&restaurant_id=CHA1001', `Request ${i}`);
+                // Delay 50ms giữa các requests
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            log(`📊 Summary: ${successCount} success, ${errorCount} errors, ${rateLimitCount} rate limited`, 'info');
+        }
+
+        async function testBurstRequests() {
+            log('🧪 Testing burst requests (20 concurrent)...', 'info');
+            
+            const promises = [];
+            for (let i = 1; i <= 20; i++) {
+                promises.push(makeRequest('/Menu/Menu?id_table=B02&restaurant_id=CHA1001', `Burst Request ${i}`));
+            }
+            
+            await Promise.all(promises);
+            log(`📊 Summary: ${successCount} success, ${errorCount} errors, ${rateLimitCount} rate limited`, 'info');
+        }
+
+        async function testMenuEndpoint() {
+            log('🧪 Testing Menu endpoint...', 'info');
+            await makeRequest('/Menu/Menu?id_table=B02&restaurant_id=CHA1001', 'Menu Endpoint');
+        }
+
+        async function testCartEndpoint() {
+            log('🧪 Testing Cart endpoint...', 'info');
+            await makeRequest('/Cart/CartDetail?acsc=test', 'Cart Endpoint');
+        }
+
+        async function testPaymentEndpoint() {
+            log('🧪 Testing Payment endpoint...', 'info');
+            await makeRequest('/Payment/Cash?acsc=test', 'Payment Endpoint');
+        }
+
+        // Auto-log khi trang load
+        log('🚀 Rate Limiting Test Tool loaded', 'success');
+        log('💡 Click buttons above to test different scenarios', 'info');
+    </script>
+</body>
+</html> 

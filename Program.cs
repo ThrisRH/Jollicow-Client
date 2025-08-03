@@ -1,4 +1,5 @@
 using Jollicow.Services;
+using Jollicow.middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,7 @@ var app = builder.Build();
 
 // Middleware
 // app.UseMiddleware<RequestResponseLoggingMiddleware>();
+app.UseRateLimiting();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
