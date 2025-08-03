@@ -154,5 +154,103 @@ namespace Jollicow.Controllers
         {
             return View();
         }
+
+        [HttpGet]
+        public async Task<IActionResult> TrackBill(string acsc)
+        {
+            // Lấy thông tin từ mã hóa
+            var decrypted = _tokenService.TryDecrypt(acsc);
+            if (decrypted == null)
+            {
+                ViewBag.Error = "Link không hợp lệ hoặc đã hết hạn.";
+                return View("Error");
+            }
+
+            var (idTable, restaurantId) = decrypted.Value;
+
+            if (string.IsNullOrEmpty(idTable) || string.IsNullOrEmpty(restaurantId))
+            {
+                return BadRequest("Thiếu thông tin.");
+            }
+
+            ViewData["IdTable"] = idTable;
+            ViewData["RestaurantId"] = restaurantId;
+            ViewData["Acsc"] = acsc;
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> GetBillStatus([FromBody] GetBillStatusRequest request)
+        {
+            try
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    var requestData = new
+                    {
+                        id_table = request.IdTable,
+                        id_restaurant = request.RestaurantId
+                    };
+
+                    var json = System.Text.Json.JsonSerializer.Serialize(requestData);
+                    var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                    var response = await httpClient.PostAsync("https://jollicowbe-admin.up.railway.app/api/admin/orders/billfortable", content);
+
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogInformation($"API Response Status: {response.StatusCode}");
+                    _logger.LogInformation($"API Response Content: {responseContent}");
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // responseContent đã được đọc ở trên
+                        var billResponse = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, BillModel>>(responseContent);
+
+                        // Lấy đơn hàng có date_create gần nhất (mới nhất)
+                        var billData = billResponse?.Values
+                            .OrderByDescending(bill => bill.DateCreate)
+                            .FirstOrDefault();
+
+                        if (billData != null)
+                        {
+                            return Json(new
+                            {
+                                success = true,
+                                data = billData,
+                                status = "success"
+                            });
+                        }
+                        else
+                        {
+                            return Json(new
+                            {
+                                success = false,
+                                error = "Không tìm thấy đơn hàng",
+                                status = "error"
+                            });
+                        }
+                    }
+                    else
+                    {
+                        return Json(new
+                        {
+                            success = false,
+                            error = "Không thể lấy thông tin bill",
+                            status = "error"
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Lỗi khi lấy bill status: {ex.Message}");
+                return Json(new
+                {
+                    success = false,
+                    error = ex.Message,
+                    status = "error"
+                });
+            }
+        }
     }
 }

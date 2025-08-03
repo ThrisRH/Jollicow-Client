@@ -13,13 +13,22 @@
             <div class="alert alert-success">
                 <h5 class="mb-2">Cảm ơn bạn đã đặt hàng</h5>
                 <p class="mb-1">Đơn hàng của bạn đã được ghi nhận và đang được xử lý.</p>
-                <p class="mb-0">Vui lòng chờ nhân viên phục vụ giao hàng đến bàn của bạn.</p>
+                <p class="mb-0">Đang chuyển đến trang theo dõi đơn hàng...</p>
             </div>
 
             <div class="mt-4">
-                <a href="@Url.Action("Menu", "Menu", new { acsc = Context.Request.Query["acsc"] })"
-                    class="btn btn-primary">Tiếp tục đặt hàng</a>
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Tự động chuyển hướng sau 2 giây</p>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Tự động chuyển đến trang TrackBill sau 2 giây
+    setTimeout(function () {
+        window.location.href = '@Url.Action("TrackBill", "Payment", new { acsc = Context.Request.Query["acsc"] })';
+    }, 2000);
+</script>

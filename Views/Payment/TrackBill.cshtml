@@ -1,0 +1,277 @@
+@{
+    ViewData["Title"] = "Theo dõi đơn hàng";
+    var idTable = ViewData["IdTable"]?.ToString() ?? "";
+    var restaurantId = ViewData["RestaurantId"]?.ToString() ?? "";
+    var acsc = ViewData["Acsc"]?.ToString() ?? "";
+}
+
+@if (string.IsNullOrEmpty(idTable) || string.IsNullOrEmpty(restaurantId))
+{
+    <div class="alert alert-danger mt-5">Không hợp lệ!</div>
+}
+else
+{
+    <div class="bill-tracking-container">
+        <div class="container" style="max-width: 600px;">
+            <div class="card bill-tracking-card shadow">
+                <div class="card-body text-center">
+                    <h3 class="mb-4 bill-tracking-title">Theo dõi đơn hàng</h3>
+
+                    <!-- Loading State -->
+                    <div id="loadingState" class="mb-4 bill-loading">
+                        <div class="spinner-border text-primary mb-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <h5 class="text-muted">Đang kiểm tra trạng thái đơn hàng...</h5>
+                        <p class="text-muted">Bàn số: @idTable</p>
+                    </div>
+
+                    <!-- Pending State -->
+                    <div id="pendingState" class="mb-4 bill-pending" style="display: none;">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-clock-history mb-3" style="font-size: 3rem; color: #ffc107;"></i>
+                            <h5 class="mb-2">Đơn hàng đang chờ xử lý</h5>
+                            <p class="mb-1">Đơn hàng của bạn đã được ghi nhận và đang chờ nhân viên xác nhận.</p>
+                            <p class="mb-0">Vui lòng chờ trong giây lát...</p>
+                        </div>
+                        <div class="progress mb-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar"
+                                style="width: 100%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Bill State -->
+                    <div id="billState" class="mb-4 bill-success" style="display: none;">
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle mb-3" style="font-size: 3rem; color: #198754;"></i>
+                            <h5 class="mb-2">Đơn hàng đã sẵn sàng!</h5>
+                            <p class="mb-0">Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị.</p>
+                        </div>
+
+                        <!-- Bill Details -->
+                        <div id="billDetails" class="text-start">
+                            <!-- Bill content will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="errorState" class="mb-4 bill-error" style="display: none;">
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle mb-3" style="font-size: 3rem; color: #dc3545;"></i>
+                            <h5 class="mb-2">Có lỗi xảy ra</h5>
+                            <p id="errorMessage" class="mb-0">Không thể tải thông tin đơn hàng.</p>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="mt-4">
+                        <a href="@Url.Action("Menu", "Menu", new { acsc = acsc })"
+                            class="btn btn-primary bill-nav-button">Quay lại menu</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<script>
+    let pollingInterval;
+    let pollCount = 0;
+    const maxPolls = 60; // Tối đa 5 phút (60 * 5 giây)
+
+    document.addEventListener('DOMContentLoaded', function () {
+        startPolling();
+    });
+
+    function startPolling() {
+        // Bắt đầu polling ngay lập tức
+        checkBillStatus();
+
+        // Polling mỗi 5 giây
+        pollingInterval = setInterval(checkBillStatus, 5000);
+    }
+
+    async function checkBillStatus() {
+        try {
+            pollCount++;
+
+            const response = await fetch('/Payment/GetBillStatus', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    idTable: '@idTable',
+                    restaurantId: '@restaurantId'
+                })
+            });
+
+            const result = await response.json();
+            console.log('API Response:', result);
+
+            if (result.success) {
+                // Kiểm tra trạng thái bill
+                const billData = result.data;
+
+                // Nếu API trả về dictionary với nhiều orders, lấy order có date_create gần nhất
+                let targetBill = billData;
+                console.log('Bill Data:', billData);
+
+                if (typeof billData === 'object' && !billData.status_order) {
+                    // Có thể là dictionary với nhiều orders
+                    const orders = Object.values(billData);
+
+                    if (orders.length > 0) {
+                        // Sắp xếp theo thời gian tạo và lấy mới nhất
+                        orders.sort((a, b) => new Date(b.date_create) - new Date(a.date_create));
+                        targetBill = orders[0];
+                    } else {
+                        // Không có order nào, tiếp tục polling
+                        showPendingState();
+                        return;
+                    }
+                }
+
+                // Hiển thị bill ngay lập tức vì đã có order
+                console.log('Target Bill:', targetBill);
+                showBillState(targetBill);
+                clearInterval(pollingInterval);
+            } else {
+                // Nếu poll quá nhiều lần mà không thành công
+                if (pollCount >= maxPolls) {
+                    showErrorState('Đã hết thời gian chờ. Vui lòng liên hệ nhân viên.');
+                    clearInterval(pollingInterval);
+                } else {
+                    // Vẫn tiếp tục polling nếu chưa đạt giới hạn
+                    showPendingState();
+                }
+            }
+        } catch (error) {
+            console.error('Lỗi khi kiểm tra bill status:', error);
+
+            if (pollCount >= maxPolls) {
+                showErrorState('Có lỗi xảy ra khi kiểm tra trạng thái đơn hàng.');
+                clearInterval(pollingInterval);
+            }
+        }
+    }
+
+    function showPendingState() {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('pendingState').style.display = 'block';
+        document.getElementById('billState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'none';
+    }
+
+    function showBillState(billData) {
+        console.log('showBillState called with:', billData);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('pendingState').style.display = 'none';
+        document.getElementById('billState').style.display = 'block';
+        document.getElementById('errorState').style.display = 'none';
+
+        // Populate bill details
+        const billDetails = document.getElementById('billDetails');
+        const formattedHtml = formatBillData(billData);
+        console.log('Formatted HTML:', formattedHtml);
+        billDetails.innerHTML = formattedHtml;
+    }
+
+    function showErrorState(message) {
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('pendingState').style.display = 'none';
+        document.getElementById('billState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+
+        document.getElementById('errorMessage').textContent = message;
+    }
+
+    function formatBillData(billData) {
+        // Format bill data based on API response structure
+        const items = billData.items || [];
+        const totalPrice = billData.total_price || 0;
+        const defaultPrice = billData.default_price || 0;
+        const status = billData.status_order || 'pending';
+        const dateCreate = billData.date_create ? new Date(billData.date_create).toLocaleString('vi-VN') : 'Không xác định';
+        const idOrder = billData.id_order || 'N/A';
+
+        let itemsHtml = '';
+        if (items.length > 0) {
+            itemsHtml = items.map(item => `
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div>
+                        <div class="fw-bold">${item.id_dishes}</div>
+                        <small class="text-muted">
+                            ${item.quantity}x ${item.price?.toLocaleString('vi-VN')} VNĐ
+                            ${item.name_topping && item.name_topping.length > 0 ? `<br>Toppings: ${item.name_topping.join(', ')}` : ''}
+                            ${item.note ? `<br>Ghi chú: ${item.note}` : ''}
+                        </small>
+                    </div>
+                    <div class="fw-bold">${(item.price * item.quantity)?.toLocaleString('vi-VN')} VNĐ</div>
+                </div>
+            `).join('');
+        }
+
+        return `
+            <div class="card bill-details-card">
+                <div class="card-header">
+                    <h6 class="mb-0">Chi tiết đơn hàng #${idOrder}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Bàn số</small>
+                            <div class="fw-bold">${billData.id_table}</div>
+                        </div>
+                                                 <div class="col-6">
+                             <small class="text-muted">Trạng thái</small>
+                             <div class="fw-bold bill-status-${status === 'preparing' || status === 'confirmed' ? status : 'pending'}">${status}</div>
+                         </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted">Mã đơn hàng</small>
+                            <div class="fw-bold">${idOrder}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Thời gian tạo</small>
+                            <div class="fw-bold">${dateCreate}</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted">Danh sách món</small>
+                        <div class="mt-2">
+                            ${itemsHtml || '<div class="text-muted">Không có món nào</div>'}
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Tổng tiền:</span>
+                            <span>${totalPrice?.toLocaleString('vi-VN')} VNĐ</span>
+                        </div>
+                        ${defaultPrice !== totalPrice ? `
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>Giảm giá:</span>
+                            <span>-${(defaultPrice - totalPrice)?.toLocaleString('vi-VN')} VNĐ</span>
+                        </div>
+                        ` : ''}
+                        <div class="d-flex justify-content-between fw-bold fs-5">
+                            <span>Thành tiền:</span>
+                            <span>${totalPrice?.toLocaleString('vi-VN')} VNĐ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Cleanup khi rời trang
+    window.addEventListener('beforeunload', function () {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+        }
+    });
+</script>
